@@ -10,7 +10,7 @@ INSTALL_ROS=1
 
 ############################################################
 # Note:
-#    ArenaSDK does not need to be installed as long as 
+#    ArenaSDK does not need to be installed as long as
 #    $ARENA_INSTALLATION_ROOT point to ArenaSDK binaries
 #
 ############################################################
@@ -19,12 +19,12 @@ INSTALL_ROS=1
 set -x #echo on
 
 # only run with sudo
-if [ `id -u` -ne 0 ]; then 
+if [ `id -u` -ne 0 ]; then
     echo "Please run as root"
     exit
 fi
 
-# info 
+# info
 CURR_OS="$(lsb_release -sc)"
 
 if [ $CURR_OS = "xenial" ]; then
@@ -54,9 +54,9 @@ if [ $INSTALL_ROS -eq 1 ]; then
     # Install ROS Desktop.
     sudo apt-get update
     sudo apt-get install ros-$ROS_DIS-desktop-full
-    
+
     # Setup system dependencies for ROS.
-    
+
     # NOTE: might need sudo apt-get install python[3]-rosdep
     sudo rosdep init
     sudo rosdep fix-permissions
@@ -70,11 +70,11 @@ if [ $INSTALL_ROS -eq 1 ]; then
     #echo "source /opt/ros/$ROS_DIS/setup.zsh" >> ~/.zshrc
 
     # would not have an effect if script is not run in intractive mode
-    #source ~/.bashrc 
+    #source ~/.bashrc
 
     #
-    # Install ROS package workspace dependencies. This will allow 
-    # you to create and manage your own ROS workspaces, including 
+    # Install ROS package workspace dependencies. This will allow
+    # you to create and manage your own ROS workspaces, including
     # the ROS workspace usedby arena_camera.
     #
     sudo apt-get install python-rosinstall \
@@ -87,7 +87,7 @@ fi
 # Arena SDK section
 ############################################################
 
-# dont not need to be installed as long as 
+# dont not need to be installed as long as
 # $ARENA_INSTALLATION_ROOT points to ArenaSDK binaries
 
 
@@ -103,7 +103,7 @@ fi
 # Workspace section
 ############################################################
 
-# Copy the included image_encoding.h to your ROS include folder after 
+# Copy the included image_encoding.h to your ROS include folder after
 # baking the old one up (if existed).
 # A custom image_encoding.h is included to enable streaming
 # support for LUCID’s Helios camera.
