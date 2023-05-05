@@ -156,15 +156,15 @@ void ArenaCameraParameter::readFromRosParameterServer(
   gain_given_ = nh.hasParam("gain");
   if (exposure_given_) {
     nh.getParam("exposure", exposure_);
-    ROS_DEBUG_STREAM("exposure is given and has value " << exposure_);
+    ROS_WARN_STREAM("exposure is given and has value " << exposure_);
   }
   if (gain_given_) {
     nh.getParam("gain", gain_);
-    ROS_DEBUG_STREAM("gain is given and has value " << gain_);
+    ROS_WARN_STREAM("gain is given and has value " << gain_);
   }
   if (brightness_given_) {
     nh.getParam("brightness", brightness_);
-    ROS_DEBUG_STREAM("brightness is given and has value " << brightness_);
+    ROS_WARN_STREAM("brightness is given and has value " << brightness_);
   }
 
   // ignore brightness?

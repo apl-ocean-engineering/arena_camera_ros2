@@ -219,6 +219,20 @@ target_link_libraries(
 # target_link_directories NOT NEEDED as arena_sdk_LIBRARIES is
 # define with absolute paths
 
+add_executable( dump_genicam_nodes
+    tools/dump_genicam_nodes.cpp
+)
+
+# needed ".h"s
+target_include_directories( dump_genicam_nodes
+    PRIVATE ${arena_sdk_INCLUDE_DIRS}
+)
+
+# needed ".so"s
+target_link_libraries( dump_genicam_nodes
+    ${arena_sdk_LIBRARIES}
+)
+
 
 # -----------------------------------------------------------------------------
 #
@@ -266,6 +280,7 @@ install(
     TARGETS
         ${arena_camera_node_name}
         ${write_device_user_id_to_camera}
+        dump_genicam_nodes
     LIBRARY DESTINATION
         ${CATKIN_PACKAGE_LIB_DESTINATION}
     RUNTIME DESTINATION

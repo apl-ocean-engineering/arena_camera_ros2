@@ -3,7 +3,10 @@
     <arg name="respawn" default="false" />
     <arg name="debug" default="false" />
     <arg name="node_name" default="arena_imx490" />
-    <arg name="config_file" default="$(find arena_imx490)/config/default.yaml" />
+    <arg name="config_file" default="$(find arena_imx490)/launch/imx490_default.yaml" />
+
+    <arg name="run_web_server" default="false" />
+    <arg name="web_server_port" default="8080"/>
 
     <arg unless="$(arg debug)" name="launch_prefix" value="" />
     <arg     if="$(arg debug)" name="launch_prefix" value="gdb -ex run --args" />
@@ -12,4 +15,19 @@
           respawn="$(arg respawn)" launch-prefix="$(arg launch_prefix)">
         <rosparam command="load" file="$(arg config_file)" />
     </node>
+
+    <node name="web_video_server" pkg="web_video_server" type="web_video_server" output="screen"
+          respawn="$(arg respawn)" if="$(arg run_web_server)">
+        <param name="port" value="$(arg web_server_port)"/>
+    </node>
+
+    <!-- Disable some of the image_transport endpoints-->
+  <group ns="arena_imx490/image_raw">
+    <rosparam param="disable_pub_plugins">
+      - 'image_transport/compressedDepth'
+      - 'image_transport/theora'
+    </rosparam>
+  </group>
+
+
 </launch>

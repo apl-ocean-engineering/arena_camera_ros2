@@ -12,6 +12,8 @@ if (NOT ${arena_sdk_FOUND})
     include("${CMAKE_CURRENT_SOURCE_DIR}/../arena_camera//cmake/Findarena_sdk.cmake")
 endif()
 
+find_package(OpenCV REQUIRED)
+
 #
 # CATKIN
 #
@@ -117,6 +119,43 @@ target_link_libraries(
         ${arena_sdk_LIBRARIES}
 )
 
+#
+# Sample IMX490 executables from LucidVision
+# https://support.thinklucid.com/knowledgebase/tonemapping-images-tri054s-imx490/
+#
+
+add_executable( Cpp_Triton_OfflineProcessing
+    tools/Cpp_Triton_OfflineProcessing.cpp
+)
+
+target_include_directories( Cpp_Triton_OfflineProcessing
+    PRIVATE ${arena_sdk_INCLUDE_DIRS}
+    PRIVATE ${arena_sdk_INCLUDE_DIRS}/../Save/
+    PRIVATE ${OpenCV_INCLUDE_DIRS}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools/
+)
+
+target_link_libraries( Cpp_Triton_OfflineProcessing
+    ${arena_sdk_LIBRARIES}
+    ${OpenCV_LIBS}
+)
+
+add_executable( Cpp_Triton_Recorder
+    tools/Cpp_Triton_OfflineProcessing.cpp
+)
+
+target_include_directories( Cpp_Triton_Recorder
+    PRIVATE ${arena_sdk_INCLUDE_DIRS}
+    PRIVATE ${arena_sdk_INCLUDE_DIRS}/../Save/
+    PRIVATE ${OpenCV_INCLUDE_DIRS}
+)
+
+target_link_libraries( Cpp_Triton_Recorder
+    ${arena_sdk_LIBRARIES}
+    ${OpenCV_LIBS}
+)
+
+
 # -----------------------------------------------------------------------------
 
 install(
@@ -147,6 +186,8 @@ install(
     TARGETS
         ${arena_camera_node_name}
         ${write_device_user_id_to_camera}
+        Cpp_Triton_Recorder
+        Cpp_Triton_OfflineProcessing
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
