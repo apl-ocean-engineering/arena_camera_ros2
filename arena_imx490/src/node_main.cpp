@@ -27,30 +27,43 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef ARENA_CAMERA_ENCODING_CONVERSIONS_H
-#define ARENA_CAMERA_ENCODING_CONVERSIONS_H
-
-#include <string>
-
-namespace arena_camera {
-
-namespace encoding_conversions {
-/**
- * Converts an encoding from the sensor_msgs/image_encodings.h list into
- * the GenAPI language.
- * @return true in case that an corresponding conversion could be found and
- *         false otherwise.
+/* Authors: debout@magazino.eu
+ *          grimm@magazino.eu
+ *          engelhard@magazino.eu
  */
-bool ros2GenAPI(const std::string& ros_enc, std::string& gen_api_enc);
 
-/**
- * Converts an encoding described in GenAPI language into the ROS encoding
- * language. The ROS encodings are listed in sensor_msgs/image_encodings.h
- * @return true in case that an corresponding conversion could be found and
- *         false otherwise.
- */
-bool genAPI2Ros(const std::string& gen_api_enc, std::string& ros_enc);
+// ROS
+#include <nodelet/loader.h>
+#include <ros/ros.h>
 
-}  // namespace encoding_conversions
-}  // namespace arena_camera
-#endif  // ARENA_CAMERA_ENCODING_CONVERSIONS_H
+int main(int argc, char **argv) {
+  ros::init(argc, argv, "arena_imx490");
+  nodelet::Loader nodelet;
+  nodelet::M_string remap(ros::names::getRemappings());
+  nodelet::V_string nargv;
+  std::string nodelet_name = ros::this_node::getName();
+  nodelet.load(nodelet_name, "arena_imx490/arena_imx490", remap, nargv);
+  ros::spin();
+  return 0;
+
+  // ros::init(argc, argv, "arena_camera_node");
+
+  // arena_camera::ArenaCameraNode arena_camera_node;
+
+  // ros::Rate r(arena_camera_node.frameRate());
+
+  // ROS_INFO_STREAM("Start image grabbing if node connects to topic with "
+  //                 << "a frame_rate of: " << arena_camera_node.frameRate()
+  //                 << " Hz");
+
+  // // Main thread and brightness-service thread
+  // boost::thread th(boost::bind(&ros::spin));
+
+  // while (ros::ok()) {
+  //   arena_camera_node.spin();
+  //   r.sleep();
+  // }
+
+  ROS_INFO("Terminate ArenaCameraNode");
+  return EXIT_SUCCESS;
+}

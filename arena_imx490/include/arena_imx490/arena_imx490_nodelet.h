@@ -27,14 +27,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef ARENA_CAMERA_ARENA_CAMERA_NODE_H
-#define ARENA_CAMERA_ARENA_CAMERA_NODE_H
+#pragma once
 
 // STD
 #include <string>
 
 // ROS sys dep
-#include <boost/thread.hpp>
+// #include <boost/thread.hpp>
 
 // ROS
 #include <actionlib/server/simple_action_server.h>
@@ -53,37 +52,38 @@
 #include <diagnostic_updater/publisher.h>
 #include <image_geometry/pinhole_camera_model.h>
 #include <image_transport/image_transport.h>
+#include <nodelet/nodelet.h>
 #include <ros/ros.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/image_encodings.h>
 
 // Arena
 #include <ArenaApi.h>
-#include <arena_camera/arena_camera.h>
 #include <arena_camera/arena_camera_parameter.h>
+#include <arena_imx490/arena_imx490.h>
 
-namespace arena_camera {
+namespace arena_imx490 {
 typedef actionlib::SimpleActionServer<camera_control_msgs::GrabImagesAction>
     GrabImagesAS;
 
 /**
  * The ROS-node of the arena_camera interface
  */
-class ArenaCameraNode {
+class ArenaIMX490Nodelet : public nodelet::Nodelet {
  public:
-  ArenaCameraNode();
-  virtual ~ArenaCameraNode();
+  ArenaIMX490Nodelet();
+  virtual ~ArenaIMX490Nodelet();
 
   /**
    * initialize the camera and the ros node.
    * calls ros::shutdown if an error occurs.
    */
-  void init();
+  virtual void onInit();
 
   /**
    * spin the node
    */
-  virtual void spin();
+  // virtual void spin();
 
   /**
    * Getter for the frame rate set by the launch script or from the ros
@@ -362,7 +362,6 @@ class ArenaCameraNode {
                     camera_control_msgs::SetBool::Request& req,
                     camera_control_msgs::SetBool::Response& res);
 
-  ros::NodeHandle nh_;
   ArenaCameraParameter arena_camera_parameter_set_;
   ros::ServiceServer set_binning_srv_;
   ros::ServiceServer set_roi_srv_;
@@ -373,7 +372,7 @@ class ArenaCameraNode {
   ros::ServiceServer set_sleeping_srv_;
   std::vector<ros::ServiceServer> set_user_output_srvs_;
 
-  ArenaCamera* arena_camera_;
+  ArenaIMX490* arena_camera_;
 
   image_transport::ImageTransport* it_;
   image_transport::CameraPublisher img_raw_pub_;
@@ -381,7 +380,7 @@ class ArenaCameraNode {
   ros::Publisher* img_rect_pub_;
   image_geometry::PinholeCameraModel* pinhole_model_;
 
-  GrabImagesAS grab_imgs_raw_as_;
+  GrabImagesAS* grab_imgs_raw_as_;
   GrabImagesAS* grab_imgs_rect_as_;
 
   sensor_msgs::Image img_raw_msg_;
@@ -404,6 +403,4 @@ class ArenaCameraNode {
       diagnostic_updater::DiagnosticStatusWrapper& stat);
 };
 
-}  // namespace arena_camera
-
-#endif  // ARENA_CAMERA_ARENA_CAMERA_NODE_H
+}  // namespace arena_imx490

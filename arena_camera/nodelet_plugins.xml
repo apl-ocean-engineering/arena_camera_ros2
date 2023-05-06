@@ -1,0 +1,9 @@
+<library path="lib/libarena_camera">
+  <class name="arena_camera/ArenaCameraNodelet"
+         type="arena_camera::ArenaCameraNodelet"
+         base_class_type="nodelet::Nodelet">
+  <description>
+    Nodelet for accessing LucidVision cameras through the Arena SDK.
+  </description>
+  </class>
+</library>

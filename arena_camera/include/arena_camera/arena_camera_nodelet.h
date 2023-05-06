@@ -53,6 +53,7 @@
 #include <diagnostic_updater/publisher.h>
 #include <image_geometry/pinhole_camera_model.h>
 #include <image_transport/image_transport.h>
+#include <nodelet/nodelet.h>
 #include <ros/ros.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/image_encodings.h>
@@ -69,21 +70,21 @@ typedef actionlib::SimpleActionServer<camera_control_msgs::GrabImagesAction>
 /**
  * The ROS-node of the arena_camera interface
  */
-class ArenaCameraNode {
+class ArenaCameraNodelet : public nodelet::Nodelet {
  public:
-  ArenaCameraNode();
-  virtual ~ArenaCameraNode();
+  ArenaCameraNodelet();
+  virtual ~ArenaCameraNodelet();
 
   /**
    * initialize the camera and the ros node.
    * calls ros::shutdown if an error occurs.
    */
-  void init();
+  virtual void onInit();
 
   /**
    * spin the node
    */
-  virtual void spin();
+  // virtual void spin();
 
   /**
    * Getter for the frame rate set by the launch script or from the ros
@@ -381,7 +382,7 @@ class ArenaCameraNode {
   ros::Publisher* img_rect_pub_;
   image_geometry::PinholeCameraModel* pinhole_model_;
 
-  GrabImagesAS grab_imgs_raw_as_;
+  GrabImagesAS* grab_imgs_raw_as_;
   GrabImagesAS* grab_imgs_rect_as_;
 
   sensor_msgs::Image img_raw_msg_;

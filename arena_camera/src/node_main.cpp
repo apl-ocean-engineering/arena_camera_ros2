@@ -33,35 +33,44 @@
  */
 
 // ROS
+#include <nodelet/loader.h>
 #include <ros/ros.h>
 
-#include <boost/thread.hpp>
+// #include <boost/thread.hpp>
 
-// Arena
-#include <ArenaApi.h>
+// // Arena
+// #include <ArenaApi.h>
 
-// Arena node
-#include <arena_camera/arena_camera_node.h>
+// // Arena node
+// #include <arena_camera/arena_camera_node.h>
 
 int main(int argc, char **argv) {
   ros::init(argc, argv, "arena_camera_node");
 
-  arena_camera::ArenaCameraNode arena_camera_node;
+  nodelet::Loader nodelet;
+  nodelet::M_string remap(ros::names::getRemappings());
+  nodelet::V_string nargv;
+  std::string nodelet_name = ros::this_node::getName();
+  nodelet.load(nodelet_name, "arena_imx490/arena_imx490", remap, nargv);
+  ros::spin();
+  return 0;
 
-  ros::Rate r(arena_camera_node.frameRate());
+  // arena_camera::ArenaCameraNode arena_camera_node;
 
-  ROS_INFO_STREAM("Start image grabbing if node connects to topic with "
-                  << "a frame_rate of: " << arena_camera_node.frameRate()
-                  << " Hz");
+  // ros::Rate r(arena_camera_node.frameRate());
 
-  // Main thread and brightness-service thread
-  boost::thread th(boost::bind(&ros::spin));
+  // ROS_INFO_STREAM("Start image grabbing if node connects to topic with "
+  //                 << "a frame_rate of: " << arena_camera_node.frameRate()
+  //                 << " Hz");
 
-  while (ros::ok()) {
-    arena_camera_node.spin();
-    r.sleep();
-  }
+  // // Main thread and brightness-service thread
+  // boost::thread th(boost::bind(&ros::spin));
 
-  ROS_INFO("Terminate ArenaCameraNode");
-  return EXIT_SUCCESS;
+  // while (ros::ok()) {
+  //   arena_camera_node.spin();
+  //   r.sleep();
+  // }
+
+  // ROS_INFO("Terminate ArenaCameraNode");
+  // return EXIT_SUCCESS;
 }

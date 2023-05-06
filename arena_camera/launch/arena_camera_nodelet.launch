@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- This launchfile loads the arena_camera as a nodelet in a new
+         nodelet_manager  -->
+
+    <arg name="respawn" default="false" />
+    <arg name="debug" default="false" />
+    <arg name="node_name" default="arena_camera_node" />
+    <arg name="config_file" default="$(find arena_camera)/config/default.yaml" />
+
+    <arg unless="$(arg debug)" name="launch_prefix" value="" />
+    <arg     if="$(arg debug)" name="launch_prefix" value="gdb -ex run --args" />
+
+    <arg name="manager" default="arena_camera_nodelet_manager" />
+
+    <arg     if="$(arg respawn)" name="bond" value="" />
+    <arg unless="$(arg respawn)" name="bond" value="--no-bond" />
+
+    <!-- Nodelet manager -->
+    <node name="$(arg manager)" pkg="nodelet" type="nodelet" output="screen"
+            launch-prefix="$(arg launch_prefix)"
+            args="manager" />
+
+    <!-- The main camera driver -->
+    <node name="arena_camera" pkg="nodelet" type="nodelet" output="screen"
+            args="load arena_camera/ArenaCameraNodelet $(arg manager)" >
+        <rosparam command="load" file="$(arg config_file)" />
+    </node>
+
+</launch>

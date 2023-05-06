@@ -27,8 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef ARENA_CAMERA_ARENA_CAMERA_H
-#define ARENA_CAMERA_ARENA_CAMERA_H
+#pragma once
 
 #include <arena_camera/arena_camera_parameter.h>
 #include <sensor_msgs/RegionOfInterest.h>
@@ -37,7 +36,9 @@
 #include <string>
 #include <vector>
 
-namespace arena_camera {
+using arena_camera::ArenaCameraParameter;
+
+namespace arena_imx490 {
 // Number of channels for image encoding
 #define CHANNEL_MONO8 1
 #define CHANNEL_RGB8 3
@@ -46,7 +47,7 @@ namespace arena_camera {
  * The ArenaCamera base class. Create a new instance using the static create()
  * functions.
  */
-class ArenaCamera {
+class ArenaIMX490 {
  public:
   /**
    * Create a new ArenaCamera instance based on the DeviceUserID of the camera.
@@ -54,7 +55,7 @@ class ArenaCamera {
    * first camera that could be found is returned.
    * @return new ArenaCamera instance or NULL if the camera was not found.
    */
-  static ArenaCamera* create(const std::string& device_user_id);
+  static ArenaIMX490* create(const std::string& device_user_id);
 
   /**
    * Configures the camera according to the software trigger mode.
@@ -429,13 +430,13 @@ class ArenaCamera {
    */
   const std::vector<float>& sequencerExposureTimes() const;
 
-  virtual ~ArenaCamera();
+  virtual ~ArenaIMX490();
 
  protected:
   /**
    * Protected default constructor.
    */
-  ArenaCamera();
+  ArenaIMX490();
 
   /**
    * Enables the extended brightness search.
@@ -499,6 +500,4 @@ class ArenaCamera {
   std::vector<std::string> available_image_encodings_;
 };
 
-}  // namespace arena_camera
-
-#endif  // ARENA_CAMERA_ARENA_CAMERA_H
+}  // namespace arena_imx490

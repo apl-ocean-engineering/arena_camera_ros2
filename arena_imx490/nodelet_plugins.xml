@@ -1,0 +1,7 @@
+<library path="lib/libarena_imx490">
+  <class name="arena_imx490/ArenaIMX490Nodelet" type="arena_imx490::ArenaIMX490Nodelet" base_class_type="nodelet::Nodelet">
+  <description>
+    Nodelet for accessing LucidVision IMX490-based camera.
+  </description>
+  </class>
+</library>

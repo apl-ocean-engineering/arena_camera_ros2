@@ -27,28 +27,27 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef ARENA_CAMERA_INTERNAL_ARENA_CAMERA_H
-#define ARENA_CAMERA_INTERNAL_ARENA_CAMERA_H
+#pragma once
 
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #pragma GCC diagnostic ignored "-Wliteral-suffix"
 
 #include <GenApi/IEnumEntry.h>
-#include <arena_camera/arena_camera.h>
 #include <arena_camera/arena_camera_parameter.h>
+#include <arena_imx490/arena_imx490.h>
 
 #include <map>
 #include <string>
 #include <vector>
 
-namespace arena_camera {
+namespace arena_imx490 {
 
 template <typename CameraTraitT>
-class ArenaCameraImpl : public ArenaCamera {
+class ArenaIMX490Impl : public ArenaIMX490 {
  public:
-  explicit ArenaCameraImpl();
+  explicit ArenaIMX490Impl();
 
-  virtual ~ArenaCameraImpl();
+  virtual ~ArenaIMX490Impl();
 
   virtual bool registerCameraConfiguration();
 
@@ -56,46 +55,46 @@ class ArenaCameraImpl : public ArenaCamera {
 
   virtual bool isCamRemoved();
 
-  virtual bool setupSequencer(const std::vector<float>& exposure_times);
+  virtual bool setupSequencer(const std::vector<float> &exposure_times);
 
   virtual bool applyCamSpecificStartupSettings(
-      const ArenaCameraParameter& parameters);
+      const ArenaCameraParameter &parameters);
 
-  virtual bool startGrabbing(const ArenaCameraParameter& parameters);
+  virtual bool startGrabbing(const ArenaCameraParameter &parameters);
 
-  virtual bool grab(std::vector<uint8_t>& image);
+  virtual bool grab(std::vector<uint8_t> &image);
 
-  virtual bool grab(uint8_t* image);
+  virtual bool grab(uint8_t *image);
 
-  virtual bool setShutterMode(const arena_camera::SHUTTER_MODE& mode);
+  virtual bool setShutterMode(const arena_camera::SHUTTER_MODE &mode);
 
   virtual bool setROI(const sensor_msgs::RegionOfInterest target_roi,
-                      sensor_msgs::RegionOfInterest& reached_roi);
+                      sensor_msgs::RegionOfInterest &reached_roi);
 
-  virtual bool setBinningX(const size_t& target_binning_x,
-                           size_t& reached_binning_x);
+  virtual bool setBinningX(const size_t &target_binning_x,
+                           size_t &reached_binning_x);
 
-  virtual bool setBinningY(const size_t& target_binning_y,
-                           size_t& reached_binning_y);
+  virtual bool setBinningY(const size_t &target_binning_y,
+                           size_t &reached_binning_y);
 
-  virtual bool setImageEncoding(const std::string& target_ros_encoding);
+  virtual bool setImageEncoding(const std::string &target_ros_encoding);
 
-  virtual bool setExposure(const float& target_exposure,
-                           float& reached_exposure);
+  virtual bool setExposure(const float &target_exposure,
+                           float &reached_exposure);
 
   virtual bool setAutoflash(const std::map<int, bool> flash_on_lines);
 
-  virtual bool setGain(const float& target_gain, float& reached_gain);
+  virtual bool setGain(const float &target_gain, float &reached_gain);
 
-  virtual bool setGamma(const float& target_gamma, float& reached_gamma);
+  virtual bool setGamma(const float &target_gamma, float &reached_gamma);
 
-  virtual bool setBrightness(const int& target_brightness,
-                             const float& current_brightness,
-                             const bool& exposure_auto, const bool& gain_auto);
+  virtual bool setBrightness(const int &target_brightness,
+                             const float &current_brightness,
+                             const bool &exposure_auto, const bool &gain_auto);
 
   virtual std::vector<int> detectAndCountNumUserOutputs();
 
-  virtual bool setUserOutput(const int& output_id, const bool& value);
+  virtual bool setUserOutput(const int &output_id, const bool &value);
 
   virtual size_t currentOffsetX();
 
@@ -157,30 +156,23 @@ class ArenaCameraImpl : public ArenaCamera {
 
   // Each camera has it's own getter for GenApi accessors that are named
   // differently for USB and GigE
-  GenApi::IFloat& exposureTime();
-  GainType& gain();
-  GenApi::IFloat& gamma();
-  GenApi::IFloat& autoExposureTimeLowerLimit();
-  GenApi::IFloat& autoExposureTimeUpperLimit();
-  GainType& autoGainLowerLimit();
-  GainType& autoGainUpperLimit();
-  GenApi::IFloat& resultingFrameRate();
-  AutoTargetBrightnessType& autoTargetBrightness();
+  GenApi::IFloat &exposureTime();
+  GainType &gain();
+  GenApi::IFloat &gamma();
+  GenApi::IFloat &autoExposureTimeLowerLimit();
+  GenApi::IFloat &autoExposureTimeUpperLimit();
+  GainType &autoGainLowerLimit();
+  GainType &autoGainUpperLimit();
+  GenApi::IFloat &resultingFrameRate();
+  AutoTargetBrightnessType &autoTargetBrightness();
 
-  virtual bool setExtendedBrightness(const int& target_brightness,
-                                     const float& current_brightness);
+  virtual bool setExtendedBrightness(const int &target_brightness,
+                                     const float &current_brightness);
 
   // virtual bool grab(Arena::CGrabResultPtr& grab_result);
 
-  virtual bool setupSequencer(const std::vector<float>& exposure_times,
-                              std::vector<float>& exposure_times_set);
+  virtual bool setupSequencer(const std::vector<float> &exposure_times,
+                              std::vector<float> &exposure_times_set);
 };
 
-}  // namespace arena_camera
-
-// #include <arena_camera/internal/impl/arena_camera_base.hpp>
-// #include <arena_camera/internal/impl/arena_camera_usb.hpp>
-// #include <arena_camera/internal/impl/arena_camera_dart.hpp>
-// #include <arena_camera/internal/impl/arena_camera_gige.hpp>
-
-#endif  // ARENA_CAMERA_INTERNAL_ARENA_CAMERA_H
+}  // namespace arena_imx490

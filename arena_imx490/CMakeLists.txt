@@ -30,6 +30,7 @@ set(CATKIN_COMPONENTS
      roslint
      roslaunch
      sensor_msgs
+     arena_camera
 )
 
 ## Find catkin macros and libraries
@@ -71,31 +72,49 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ARENA_CAMERA_NODE
 #
 
-set(arena_camera_node_name arena_imx490_node)
+set( arena_imx490_lib_name ${PROJECT_NAME})
 
-add_executable( ${arena_camera_node_name}
-    src/arena_camera_node.cpp
-    src/arena_camera_parameter.cpp
-    src/arena_camera.cpp
-    src/encoding_conversions.cpp
-    src/main.cpp
+add_library( ${arena_imx490_lib_name}
+    src/arena_imx490_nodelet.cpp
+    src/arena_imx490.cpp
 )
 
-target_include_directories( ${arena_camera_node_name}
+target_include_directories( ${arena_imx490_lib_name}
     PRIVATE ${catkin_INCLUDE_DIRS}
     PRIVATE ${arena_sdk_INCLUDE_DIRS}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries( ${arena_camera_node_name}
+target_link_libraries( ${arena_imx490_lib_name}
     ${catkin_LIBRARIES}
     ${arena_sdk_LIBRARIES}
 )
 
-add_dependencies( ${arena_camera_node_name}
+
+add_dependencies( ${arena_imx490_lib_name}
     ${catkin_EXPORTED_TARGETS}
 )
 
+
+#
+#
+#
+
+set(arena_camera_node_name arena_imx490_node)
+
+# Since this is a thin wrapper around nodelet:::oader, it
+# doesn't depend on any of the package libs
+add_executable( ${arena_camera_node_name}
+    src/node_main.cpp
+)
+
+target_include_directories( ${arena_camera_node_name}
+    PRIVATE ${catkin_INCLUDE_DIRS}
+)
+
+target_link_libraries( ${arena_camera_node_name}
+    ${catkin_LIBRARIES}
+)
 
 #
 # WRITE_DEVICE_USER_ID_TO_CAMERA

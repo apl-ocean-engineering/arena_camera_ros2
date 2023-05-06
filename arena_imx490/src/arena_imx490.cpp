@@ -35,10 +35,11 @@
 #include <ArenaApi.h>
 
 // Arena node
-#include <arena_camera/internal/arena_camera.h>
+#include <arena_imx490/internal/arena_imx490.h>
 
-namespace arena_camera {
-ArenaCamera::ArenaCamera()
+namespace arena_imx490 {
+
+ArenaIMX490::ArenaIMX490()
     : device_user_id_(""),
       img_rows_(0),
       img_cols_(0),
@@ -47,30 +48,30 @@ ArenaCamera::ArenaCamera()
       is_ready_(false),
       max_brightness_tolerance_(2.5) {}
 
-const std::string& ArenaCamera::deviceUserID() const { return device_user_id_; }
+const std::string& ArenaIMX490::deviceUserID() const { return device_user_id_; }
 
-const size_t& ArenaCamera::imageRows() const { return img_rows_; }
+const size_t& ArenaIMX490::imageRows() const { return img_rows_; }
 
-const size_t& ArenaCamera::imageCols() const { return img_cols_; }
+const size_t& ArenaIMX490::imageCols() const { return img_cols_; }
 
-const size_t& ArenaCamera::imageSize() const { return img_size_byte_; }
+const size_t& ArenaIMX490::imageSize() const { return img_size_byte_; }
 
-const float& ArenaCamera::maxBrightnessTolerance() const {
+const float& ArenaIMX490::maxBrightnessTolerance() const {
   return max_brightness_tolerance_;
 }
 
-const bool& ArenaCamera::isReady() const { return is_ready_; }
+const bool& ArenaIMX490::isReady() const { return is_ready_; }
 
-std::size_t ArenaCamera::numUserOutputs() const {
+std::size_t ArenaIMX490::numUserOutputs() const {
   return user_output_selector_enums_.size();
 }
 
-const std::vector<float>& ArenaCamera::sequencerExposureTimes() const {
+const std::vector<float>& ArenaIMX490::sequencerExposureTimes() const {
   return seq_exp_times_;
 }
 
-ArenaCamera::~ArenaCamera() {
+ArenaIMX490::~ArenaIMX490() {
   // Releases all Arena resources.
 }
 
-}  // namespace arena_camera
+}  // namespace arena_imx490

@@ -55,6 +55,7 @@ set(CATKIN_COMPONENTS
      roslint
      roslaunch
      sensor_msgs
+     nodelet
 )
 
 ## Find catkin macros and libraries
@@ -146,6 +147,29 @@ roslaunch_add_file_check(launch)
 add_definitions("-std=gnu++11")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(arena_camera_lib_name ${PROJECT_NAME})
+
+add_library( ${arena_camera_lib_name}
+    src/encoding_conversions.cpp
+    src/arena_camera_parameter.cpp
+    src/arena_camera_nodelet.cpp
+    src/arena_camera.cpp
+)
+
+target_include_directories( ${arena_camera_lib_name}
+    PRIVATE ${catkin_INCLUDE_DIRS}
+    PRIVATE ${arena_sdk_INCLUDE_DIRS}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries( ${arena_camera_lib_name}
+    ${catkin_LIBRARIES}
+    ${arena_sdk_LIBRARIES}
+)
+
+add_dependencies( ${arena_camera_lib_name}
+    ${catkin_EXPORTED_TARGETS}
+)
 
 #
 # ARENA_CAMERA_NODE
@@ -153,41 +177,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(arena_camera_node_name arena_camera_node)
 
-# - declare an executable
-# - needed ".cpp"s
-add_executable(
-    ${arena_camera_node_name}  # runs by rosrun
-        src/arena_camera_node.cpp
-        src/arena_camera_parameter.cpp
-        src/arena_camera.cpp
-        src/encoding_conversions.cpp
-        src/main.cpp
+# Since this is a thin wrapper around nodelet:::oader, it
+# doesn't depend on any of the package libs
+add_executable( ${arena_camera_node_name}
+    src/node_main.cpp
 )
 
-# needed ".h"s
-target_include_directories(
-    ${arena_camera_node_name}
-        PRIVATE ${catkin_INCLUDE_DIRS}
-        PRIVATE ${arena_sdk_INCLUDE_DIRS}
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+target_include_directories( ${arena_camera_node_name}
+    PRIVATE ${catkin_INCLUDE_DIRS}
 )
 
-# needed ".so"s
-target_link_libraries(
-    ${arena_camera_node_name}
-        ${catkin_LIBRARIES}
-        ${arena_sdk_LIBRARIES}
+target_link_libraries( ${arena_camera_node_name}
+    ${catkin_LIBRARIES}
 )
-
-add_dependencies(
-    ${arena_camera_node_name}
-        # because this uses one of the catkin componenets which is camera_control_msg
-        ${catkin_EXPORTED_TARGETS}
-)
-
-# target_link_directories NOT NEEDED as arena_sdk_LIBRARIES is
-# define with absolute paths
-
 
 #
 # WRITE_DEVICE_USER_ID_TO_CAMERA
