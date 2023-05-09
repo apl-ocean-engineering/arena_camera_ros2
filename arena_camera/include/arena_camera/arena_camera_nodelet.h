@@ -84,7 +84,7 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
   /**
    * spin the node
    */
-  // virtual void spin();
+  void timerCallback(const ros::TimerEvent&);
 
   /**
    * Getter for the frame rate set by the launch script or from the ros
@@ -375,6 +375,8 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
   std::vector<ros::ServiceServer> set_user_output_srvs_;
 
   ArenaCamera* arena_camera_;
+
+  ros::Timer image_timer_;
 
   image_transport::ImageTransport* it_;
   image_transport::CameraPublisher img_raw_pub_;

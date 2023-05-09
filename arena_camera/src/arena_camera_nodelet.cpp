@@ -156,6 +156,9 @@ void ArenaCameraNodelet::onInit() {
     ros::shutdown();
     return;
   }
+
+  image_timer_ = nh.createTimer(ros::Duration(1.0 / frameRate()),
+                                &ArenaCameraNodelet::timerCallback, this);
 }
 
 bool createDevice(const std::string& device_user_id_to_open) {
@@ -434,35 +437,28 @@ bool ArenaCameraNodelet::startGrabbing() {
 
     // exposure_auto_ will be already set to false if exposure_given_ is true
     // read params () solved the priority between them
-    // if (arena_camera_parameter_set_.exposure_auto_)
-    // {
-    //   Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
-    //   "Continuous");
-    //   // todo update parameter on the server
-    //   ROS_INFO_STREAM("Settings Exposure to auto/Continuous");
-    // }
-    // else
-    // {
-    //   Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
-    //   "Off");
-    //   // todo update parameter on the server
-    //   ROS_INFO_STREAM("Settings Exposure to off/false");
-    // }
+    if (arena_camera_parameter_set_.exposure_auto_) {
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
+                                             "Continuous");
+      // todo update parameter on the server
+      ROS_INFO_STREAM("Settings Exposure to auto/Continuous");
+    } else {
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto", "Off");
+      // todo update parameter on the server
+      ROS_INFO_STREAM("Settings Exposure to off/false");
+    }
 
-    // if (arena_camera_parameter_set_.exposure_given_)
-    //  {
-    //   float reached_exposure;
-    //   if (setExposure(arena_camera_parameter_set_.exposure_,
-    //   reached_exposure))
-    //   {
-    //     // Note: ont update the ros param because it might keep
-    //     // decreasing or incresing overtime when rerun
-    //     ROS_INFO_STREAM("Setting exposure to " <<
-    //     arena_camera_parameter_set_.exposure_
-    //                                            << ", reached: " <<
-    //                                            reached_exposure);
-    //   }
-    // }
+    if (arena_camera_parameter_set_.exposure_given_) {
+      float reached_exposure;
+      if (setExposure(arena_camera_parameter_set_.exposure_,
+                      reached_exposure)) {
+        // Note: ont update the ros param because it might keep
+        // decreasing or incresing overtime when rerun
+        ROS_INFO_STREAM("Setting exposure to "
+                        << arena_camera_parameter_set_.exposure_
+                        << ", reached: " << reached_exposure);
+      }
+    }
 
     //
     // GAIN
@@ -470,31 +466,26 @@ bool ArenaCameraNodelet::startGrabbing() {
 
     // gain_auto_ will be already set to false if gain_given_ is true
     // read params () solved the priority between them
-    // if (arena_camera_parameter_set_.gain_auto_)
-    // {
-    //   Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto",
-    //   "Continuous");
-    //   // todo update parameter on the server
-    //   ROS_INFO_STREAM("Settings Gain to auto/Continuous");
-    // }
-    // else
-    // {
-    //   Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Off");
-    //   // todo update parameter on the server
-    //   ROS_INFO_STREAM("Settings Gain to off/false");
-    // }
+    if (arena_camera_parameter_set_.gain_auto_) {
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto",
+                                             "Continuous");
+      // todo update parameter on the server
+      ROS_INFO_STREAM("Settings Gain to auto/Continuous");
+    } else {
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Off");
+      // todo update parameter on the server
+      ROS_INFO_STREAM("Settings Gain to off/false");
+    }
 
-    // if (arena_camera_parameter_set_.gain_given_)
-    // {
-    //   float reached_gain;
-    //   if (setGain(arena_camera_parameter_set_.gain_, reached_gain))
-    //   {
-    //     // Note: ont update the ros param because it might keep
-    //     // decreasing or incresing overtime when rerun
-    //     ROS_INFO_STREAM("Setting gain to: " <<
-    //     arena_camera_parameter_set_.gain_ << ", reached: " << reached_gain);
-    //   }
-    // }
+    if (arena_camera_parameter_set_.gain_given_) {
+      float reached_gain;
+      if (setGain(arena_camera_parameter_set_.gain_, reached_gain)) {
+        // Note: ont update the ros param because it might keep
+        // decreasing or incresing overtime when rerun
+        ROS_INFO_STREAM("Setting gain to: " << arena_camera_parameter_set_.gain_
+                                            << ", reached: " << reached_gain);
+      }
+    }
 
     //
     // GAMMA
@@ -698,62 +689,65 @@ uint32_t ArenaCameraNodelet::getNumSubscribersRaw() const {
 }
 
 // void ArenaCameraNodelet::spin() {
-//   if (camera_info_manager_->isCalibrated()) {
-//     ROS_INFO_ONCE("Camera is calibrated");
-//   } else {
-//     ROS_INFO_ONCE("Camera not calibrated");
-//   }
+void ArenaCameraNodelet::timerCallback(const ros::TimerEvent&) {
+  if (camera_info_manager_->isCalibrated()) {
+    ROS_INFO_ONCE("Camera is calibrated");
+  } else {
+    ROS_INFO_ONCE("Camera not calibrated");
+  }
 
-//   if (pDevice_->IsConnected() == false) {
-//     ROS_ERROR("Arena camera has been removed, trying to reset");
-//     pSystem_->DestroyDevice(pDevice_);
-//     pDevice_ = nullptr;
-//     Arena::CloseSystem(pSystem_);
-//     pSystem_ = nullptr;
-//     for (ros::ServiceServer& user_output_srv : set_user_output_srvs_) {
-//       user_output_srv.shutdown();
-//     }
-//     ros::Duration(0.5).sleep();  // sleep for half a second
-//     init();
-//     return;
-//   }
+  if (pDevice_->IsConnected() == false) {
+    ROS_ERROR("Arena camera has been removed, giving up!");
+    image_timer_.stop();
+    return;
 
-//   if (!isSleeping() &&
-//       (img_raw_pub_.getNumSubscribers() || getNumSubscribersRect())) {
-//     if (getNumSubscribersRaw() || getNumSubscribersRect()) {
-//       if (!grabImage()) {
-//         ROS_INFO("did not get image");
-//         return;
-//       }
-//     }
+    // ROS_ERROR("Arena camera has been removed, trying to reset");
+    //  pSystem_->DestroyDevice(pDevice_);
+    //  pDevice_ = nullptr;
+    //  Arena::CloseSystem(pSystem_);
+    //  pSystem_ = nullptr;
+    //  for (ros::ServiceServer& user_output_srv : set_user_output_srvs_) {
+    //    user_output_srv.shutdown();
+    //  }
+    //  ros::Duration(0.5).sleep();  // sleep for half a second
+    //  init();
+    //  return;
+  }
 
-//     if (img_raw_pub_.getNumSubscribers() > 0) {
-//       // get actual cam_info-object in every frame, because it might have
-//       // changed due to a 'set_camera_info'-service call
-//       sensor_msgs::CameraInfoPtr cam_info(
-//           new
-//           sensor_msgs::CameraInfo(camera_info_manager_->getCameraInfo()));
-//       cam_info->header.stamp = img_raw_msg_.header.stamp;
+  if (!isSleeping() &&
+      (img_raw_pub_.getNumSubscribers() || getNumSubscribersRect())) {
+    if (getNumSubscribersRaw() || getNumSubscribersRect()) {
+      if (!grabImage()) {
+        ROS_INFO("did not get image");
+        return;
+      }
+    }
 
-//       // Publish via image_transport
-//       img_raw_pub_.publish(img_raw_msg_, *cam_info);
-//       ROS_INFO_ONCE("Number subscribers received");
-//     }
+    if (img_raw_pub_.getNumSubscribers() > 0) {
+      // get actual cam_info-object in every frame, because it might have
+      // changed due to a 'set_camera_info'-service call
+      sensor_msgs::CameraInfoPtr cam_info(
+          new sensor_msgs::CameraInfo(camera_info_manager_->getCameraInfo()));
+      cam_info->header.stamp = img_raw_msg_.header.stamp;
 
-//     if (getNumSubscribersRect() > 0 && camera_info_manager_->isCalibrated())
-//     {
-//       cv_bridge_img_rect_->header.stamp = img_raw_msg_.header.stamp;
-//       assert(pinhole_model_->initialized());
-//       cv_bridge::CvImagePtr cv_img_raw =
-//           cv_bridge::toCvCopy(img_raw_msg_, img_raw_msg_.encoding);
-//       pinhole_model_->fromCameraInfo(camera_info_manager_->getCameraInfo());
-//       pinhole_model_->rectifyImage(cv_img_raw->image,
-//                                    cv_bridge_img_rect_->image);
-//       img_rect_pub_->publish(*cv_bridge_img_rect_);
-//       ROS_INFO_ONCE("Number subscribers rect received");
-//     }
-//   }
-// }
+      // Publish via image_transport
+      img_raw_pub_.publish(img_raw_msg_, *cam_info);
+      ROS_INFO_ONCE("Number subscribers received");
+    }
+
+    if (getNumSubscribersRect() > 0 && camera_info_manager_->isCalibrated()) {
+      cv_bridge_img_rect_->header.stamp = img_raw_msg_.header.stamp;
+      assert(pinhole_model_->initialized());
+      cv_bridge::CvImagePtr cv_img_raw =
+          cv_bridge::toCvCopy(img_raw_msg_, img_raw_msg_.encoding);
+      pinhole_model_->fromCameraInfo(camera_info_manager_->getCameraInfo());
+      pinhole_model_->rectifyImage(cv_img_raw->image,
+                                   cv_bridge_img_rect_->image);
+      img_rect_pub_->publish(*cv_bridge_img_rect_);
+      ROS_INFO_ONCE("Number subscribers rect received");
+    }
+  }
+}
 
 bool ArenaCameraNodelet::grabImage() {
   boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
