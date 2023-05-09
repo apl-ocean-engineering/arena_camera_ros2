@@ -67,11 +67,8 @@ ArenaCameraNodelet::ArenaCameraNodelet()
       // arena_camera_(nullptr),
       it_(nullptr),
       img_raw_pub_(),
-      img_rect_pub_(),
       grab_imgs_raw_as_(nullptr),
-      grab_imgs_rect_as_(nullptr),
       pinhole_model_(),
-      cv_bridge_img_rect_(nullptr),
       camera_info_manager_(nullptr),
       sampling_indices_(),
       brightness_exp_lut_(),
@@ -522,7 +519,7 @@ bool ArenaCameraNodelet::startGrabbing() {
       // override initial camera info if the url is valid
       if (camera_info_manager_->loadCameraInfo(
               arena_camera_parameter_set_.cameraInfoURL())) {
-        setupRectification();
+        // setupRectification();
         // set the correct tf frame_id
         CameraInfoPtr cam_info(
             new CameraInfo(camera_info_manager_->getCameraInfo()));
@@ -636,34 +633,34 @@ bool ArenaCameraNodelet::startGrabbing() {
   return true;
 }
 
-void ArenaCameraNodelet::setupRectification() {
-  ros::NodeHandle nh = getNodeHandle();
+// void ArenaCameraNodelet::setupRectification() {
+//   ros::NodeHandle nh = getNodeHandle();
 
-  img_rect_pub_ =
-      ros::Publisher(nh.advertise<sensor_msgs::Image>("image_rect", 1));
+//   img_rect_pub_ =
+//       ros::Publisher(nh.advertise<sensor_msgs::Image>("image_rect", 1));
 
-  if (!grab_imgs_rect_as_) {
-    grab_imgs_rect_as_ = new GrabImagesAS(
-        nh, "grab_images_rect",
-        boost::bind(&ArenaCameraNodelet::grabImagesRectActionExecuteCB, this,
-                    _1),
-        false);
-    grab_imgs_rect_as_->start();
-  }
+//   if (!grab_imgs_rect_as_) {
+//     grab_imgs_rect_as_ = new GrabImagesAS(
+//         nh, "grab_images_rect",
+//         boost::bind(&ArenaCameraNodelet::grabImagesRectActionExecuteCB, this,
+//                     _1),
+//         false);
+//     grab_imgs_rect_as_->start();
+//   }
 
-  // if (!pinhole_model_) {
-  //   pinhole_model_ = new image_geometry::PinholeCameraModel();
-  // }
+//   // if (!pinhole_model_) {
+//   //   pinhole_model_ = new image_geometry::PinholeCameraModel();
+//   // }
 
-  pinhole_model_.fromCameraInfo(camera_info_manager_->getCameraInfo());
-  if (!cv_bridge_img_rect_) {
-    cv_bridge_img_rect_ = new cv_bridge::CvImage();
-  }
-  cv_bridge_img_rect_->header = img_raw_msg_.header;
-  cv_bridge_img_rect_->header.frame_id =
-      arena_camera_parameter_set_.cameraFrame();
-  cv_bridge_img_rect_->encoding = img_raw_msg_.encoding;
-}
+//   pinhole_model_.fromCameraInfo(camera_info_manager_->getCameraInfo());
+//   if (!cv_bridge_img_rect_) {
+//     cv_bridge_img_rect_ = new cv_bridge::CvImage();
+//   }
+//   cv_bridge_img_rect_->header = img_raw_msg_.header;
+//   cv_bridge_img_rect_->header.frame_id =
+//       arena_camera_parameter_set_.cameraFrame();
+//   cv_bridge_img_rect_->encoding = img_raw_msg_.encoding;
+// }
 
 struct CameraPublisherImpl {
   image_transport::Publisher image_pub_;
@@ -681,10 +678,10 @@ class CameraPublisherLocal {
   CameraPublisherImpl* impl_;
 };
 
-uint32_t ArenaCameraNodelet::getNumSubscribersRaw() const {
-  return ((CameraPublisherLocal*)(&img_raw_pub_))
-      ->impl_->image_pub_.getNumSubscribers();
-}
+// uint32_t ArenaCameraNodelet::getNumSubscribersRaw() const {
+//   return ((CameraPublisherLocal*)(&img_raw_pub_))
+//       ->impl_->image_pub_.getNumSubscribers();
+// }
 
 // void ArenaCameraNodelet::spin() {
 void ArenaCameraNodelet::timerCallback(const ros::TimerEvent&) {
@@ -712,14 +709,13 @@ void ArenaCameraNodelet::timerCallback(const ros::TimerEvent&) {
     //  return;
   }
 
-  if (!isSleeping() &&
-      (img_raw_pub_.getNumSubscribers() || getNumSubscribersRect())) {
-    if (getNumSubscribersRaw() || getNumSubscribersRect()) {
-      if (!grabImage()) {
-        ROS_INFO("did not get image");
-        return;
-      }
+  if (!isSleeping() && (img_raw_pub_.getNumSubscribers())) {
+    // if (getNumSubscribersRaw() ) {
+    if (!grabImage()) {
+      ROS_INFO("did not get image");
+      return;
     }
+    // }
 
     if (img_raw_pub_.getNumSubscribers() > 0) {
       // get actual cam_info-object in every frame, because it might have
@@ -731,18 +727,6 @@ void ArenaCameraNodelet::timerCallback(const ros::TimerEvent&) {
       // Publish via image_transport
       img_raw_pub_.publish(img_raw_msg_, *cam_info);
       ROS_INFO_ONCE("Number subscribers received");
-    }
-
-    if (getNumSubscribersRect() > 0 && camera_info_manager_->isCalibrated()) {
-      cv_bridge_img_rect_->header.stamp = img_raw_msg_.header.stamp;
-      assert(pinhole_model_.initialized());
-      cv_bridge::CvImagePtr cv_img_raw =
-          cv_bridge::toCvCopy(img_raw_msg_, img_raw_msg_.encoding);
-      pinhole_model_.fromCameraInfo(camera_info_manager_->getCameraInfo());
-      pinhole_model_.rectifyImage(cv_img_raw->image,
-                                  cv_bridge_img_rect_->image);
-      img_rect_pub_.publish(*cv_bridge_img_rect_);
-      ROS_INFO_ONCE("Number subscribers rect received");
     }
   }
 }
@@ -782,34 +766,6 @@ void ArenaCameraNodelet::grabImagesRawActionExecuteCB(
   camera_control_msgs::GrabImagesResult result;
   result = grabImagesRaw(goal, grab_imgs_raw_as_);
   grab_imgs_raw_as_->setSucceeded(result);
-}
-
-void ArenaCameraNodelet::grabImagesRectActionExecuteCB(
-    const camera_control_msgs::GrabImagesGoal::ConstPtr& goal) {
-  camera_control_msgs::GrabImagesResult result;
-  if (!camera_info_manager_->isCalibrated()) {
-    result.success = false;
-    grab_imgs_rect_as_->setSucceeded(result);
-    return;
-  } else {
-    result = grabImagesRaw(goal, std::ref(grab_imgs_rect_as_));
-    if (!result.success) {
-      grab_imgs_rect_as_->setSucceeded(result);
-      return;
-    }
-
-    for (std::size_t i = 0; i < result.images.size(); ++i) {
-      cv_bridge::CvImagePtr cv_img_raw =
-          cv_bridge::toCvCopy(result.images[i], result.images[i].encoding);
-      pinhole_model_.fromCameraInfo(camera_info_manager_->getCameraInfo());
-      cv_bridge::CvImage cv_bridge_img_rect;
-      cv_bridge_img_rect.header = result.images[i].header;
-      cv_bridge_img_rect.encoding = result.images[i].encoding;
-      pinhole_model_.rectifyImage(cv_img_raw->image, cv_bridge_img_rect.image);
-      cv_bridge_img_rect.toImageMsg(result.images[i]);
-    }
-    grab_imgs_rect_as_->setSucceeded(result);
-  }
 }
 
 camera_control_msgs::GrabImagesResult ArenaCameraNodelet::grabImagesRaw(
@@ -1034,14 +990,14 @@ const std::string& ArenaCameraNodelet::cameraFrame() const {
   return arena_camera_parameter_set_.cameraFrame();
 }
 
-uint32_t ArenaCameraNodelet::getNumSubscribersRect() const {
-  return camera_info_manager_->isCalibrated()
-             ? img_rect_pub_.getNumSubscribers()
-             : 0;
-}
+// uint32_t ArenaCameraNodelet::getNumSubscribersRect() const {
+//   return camera_info_manager_->isCalibrated()
+//              ? img_rect_pub_.getNumSubscribers()
+//              : 0;
+// }
 
 uint32_t ArenaCameraNodelet::getNumSubscribers() const {
-  return img_raw_pub_.getNumSubscribers() + img_rect_pub_.getNumSubscribers();
+  return img_raw_pub_.getNumSubscribers();
 }
 
 void ArenaCameraNodelet::setupInitialCameraInfo(
@@ -1867,16 +1823,6 @@ ArenaCameraNodelet::~ArenaCameraNodelet() {
   if (it_) {
     delete it_;
     it_ = nullptr;
-  }
-  if (grab_imgs_rect_as_) {
-    grab_imgs_rect_as_->shutdown();
-    delete grab_imgs_rect_as_;
-    grab_imgs_rect_as_ = nullptr;
-  }
-
-  if (cv_bridge_img_rect_) {
-    delete cv_bridge_img_rect_;
-    cv_bridge_img_rect_ = nullptr;
   }
 }
 

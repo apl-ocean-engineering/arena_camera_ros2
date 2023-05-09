@@ -48,7 +48,6 @@
 #include <camera_control_msgs/SetROI.h>
 #include <camera_control_msgs/SetSleeping.h>
 #include <camera_info_manager/camera_info_manager.h>
-#include <cv_bridge/cv_bridge.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <diagnostic_updater/publisher.h>
 #include <image_geometry/pinhole_camera_model.h>
@@ -115,26 +114,9 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
   bool setImageEncoding(const std::string& ros_encoding);
 
   /**
-   * Initializing of img_rect_pub_, grab_img_rect_as_ and the pinhole_model_,
-   * in case that a valid camera info has been set
-   * @return
-   */
-  void setupRectification();
-
-  /**
    * Returns the total number of subscribers on any advertised image topic.
    */
   uint32_t getNumSubscribers() const;
-
-  /**
-   * Returns the number of subscribers for the raw image topic
-   */
-  uint32_t getNumSubscribersRaw() const;
-
-  /**
-   * Returns the number of subscribers for the rect image topic
-   */
-  uint32_t getNumSubscribersRect() const;
 
   /**
    * Grabs an image and stores the image in img_raw_msg_
@@ -324,13 +306,6 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
       const camera_control_msgs::GrabImagesGoal::ConstPtr& goal);
 
   /**
-   * Callback for the grab rectified images action
-   * @param goal the goal
-   */
-  void grabImagesRectActionExecuteCB(
-      const camera_control_msgs::GrabImagesGoal::ConstPtr& goal);
-
-  /**
    * This function can also be called from the derived ArenaCameraOpenCV-Class
    */
   camera_control_msgs::GrabImagesResult grabImagesRaw(
@@ -385,10 +360,8 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
   image_geometry::PinholeCameraModel pinhole_model_;
 
   GrabImagesAS* grab_imgs_raw_as_;
-  GrabImagesAS* grab_imgs_rect_as_;
 
   sensor_msgs::Image img_raw_msg_;
-  cv_bridge::CvImage* cv_bridge_img_rect_;
 
   camera_info_manager::CameraInfoManager* camera_info_manager_;
 
