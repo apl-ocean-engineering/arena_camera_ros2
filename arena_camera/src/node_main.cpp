@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
   nodelet::M_string remap(ros::names::getRemappings());
   nodelet::V_string nargv;
   std::string nodelet_name = ros::this_node::getName();
-  nodelet.load(nodelet_name, "arena_camera/arena_camera", remap, nargv);
+  nodelet.load(nodelet_name, "arena_camera/ArenaCameraNodelet", remap, nargv);
   ros::spin();
   return 0;
 

@@ -27,4 +27,12 @@
         <rosparam command="load" file="$(arg config_file)" />
     </node>
 
+    <!-- Disable some of the image_transport endpoints-->
+    <group ns="image_raw">
+        <rosparam param="disable_pub_plugins">
+        - 'image_transport/compressedDepth'
+        - 'image_transport/theora'
+        </rosparam>
+    </group>
+
 </launch>
