@@ -60,7 +60,7 @@
 
 // Arena
 #include <ArenaApi.h>
-#include <arena_camera/arena_camera.h>
+// #include <arena_camera/arena_camera.h>
 #include <arena_camera/arena_camera_parameter.h>
 
 namespace arena_camera {
@@ -374,15 +374,15 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
   ros::ServiceServer set_sleeping_srv_;
   std::vector<ros::ServiceServer> set_user_output_srvs_;
 
-  ArenaCamera* arena_camera_;
+  // ArenaCamera* arena_camera_;
 
   ros::Timer image_timer_;
 
   image_transport::ImageTransport* it_;
   image_transport::CameraPublisher img_raw_pub_;
 
-  ros::Publisher* img_rect_pub_;
-  image_geometry::PinholeCameraModel* pinhole_model_;
+  ros::Publisher img_rect_pub_;
+  image_geometry::PinholeCameraModel pinhole_model_;
 
   GrabImagesAS* grab_imgs_raw_as_;
   GrabImagesAS* grab_imgs_rect_as_;

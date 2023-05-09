@@ -64,13 +64,13 @@ using sensor_msgs::CameraInfoPtr;
 ArenaCameraNodelet::ArenaCameraNodelet()
     : arena_camera_parameter_set_(),
       set_user_output_srvs_(),
-      arena_camera_(nullptr),
+      // arena_camera_(nullptr),
       it_(nullptr),
       img_raw_pub_(),
       img_rect_pub_(),
       grab_imgs_raw_as_(nullptr),
       grab_imgs_rect_as_(nullptr),
-      pinhole_model_(nullptr),
+      pinhole_model_(),
       cv_bridge_img_rect_(nullptr),
       camera_info_manager_(nullptr),
       sampling_indices_(),
@@ -639,10 +639,8 @@ bool ArenaCameraNodelet::startGrabbing() {
 void ArenaCameraNodelet::setupRectification() {
   ros::NodeHandle nh = getNodeHandle();
 
-  if (!img_rect_pub_) {
-    img_rect_pub_ =
-        new ros::Publisher(nh.advertise<sensor_msgs::Image>("image_rect", 1));
-  }
+  img_rect_pub_ =
+      ros::Publisher(nh.advertise<sensor_msgs::Image>("image_rect", 1));
 
   if (!grab_imgs_rect_as_) {
     grab_imgs_rect_as_ = new GrabImagesAS(
@@ -653,11 +651,11 @@ void ArenaCameraNodelet::setupRectification() {
     grab_imgs_rect_as_->start();
   }
 
-  if (!pinhole_model_) {
-    pinhole_model_ = new image_geometry::PinholeCameraModel();
-  }
+  // if (!pinhole_model_) {
+  //   pinhole_model_ = new image_geometry::PinholeCameraModel();
+  // }
 
-  pinhole_model_->fromCameraInfo(camera_info_manager_->getCameraInfo());
+  pinhole_model_.fromCameraInfo(camera_info_manager_->getCameraInfo());
   if (!cv_bridge_img_rect_) {
     cv_bridge_img_rect_ = new cv_bridge::CvImage();
   }
@@ -737,13 +735,13 @@ void ArenaCameraNodelet::timerCallback(const ros::TimerEvent&) {
 
     if (getNumSubscribersRect() > 0 && camera_info_manager_->isCalibrated()) {
       cv_bridge_img_rect_->header.stamp = img_raw_msg_.header.stamp;
-      assert(pinhole_model_->initialized());
+      assert(pinhole_model_.initialized());
       cv_bridge::CvImagePtr cv_img_raw =
           cv_bridge::toCvCopy(img_raw_msg_, img_raw_msg_.encoding);
-      pinhole_model_->fromCameraInfo(camera_info_manager_->getCameraInfo());
-      pinhole_model_->rectifyImage(cv_img_raw->image,
-                                   cv_bridge_img_rect_->image);
-      img_rect_pub_->publish(*cv_bridge_img_rect_);
+      pinhole_model_.fromCameraInfo(camera_info_manager_->getCameraInfo());
+      pinhole_model_.rectifyImage(cv_img_raw->image,
+                                  cv_bridge_img_rect_->image);
+      img_rect_pub_.publish(*cv_bridge_img_rect_);
       ROS_INFO_ONCE("Number subscribers rect received");
     }
   }
@@ -803,11 +801,11 @@ void ArenaCameraNodelet::grabImagesRectActionExecuteCB(
     for (std::size_t i = 0; i < result.images.size(); ++i) {
       cv_bridge::CvImagePtr cv_img_raw =
           cv_bridge::toCvCopy(result.images[i], result.images[i].encoding);
-      pinhole_model_->fromCameraInfo(camera_info_manager_->getCameraInfo());
+      pinhole_model_.fromCameraInfo(camera_info_manager_->getCameraInfo());
       cv_bridge::CvImage cv_bridge_img_rect;
       cv_bridge_img_rect.header = result.images[i].header;
       cv_bridge_img_rect.encoding = result.images[i].encoding;
-      pinhole_model_->rectifyImage(cv_img_raw->image, cv_bridge_img_rect.image);
+      pinhole_model_.rectifyImage(cv_img_raw->image, cv_bridge_img_rect.image);
       cv_bridge_img_rect.toImageMsg(result.images[i]);
     }
     grab_imgs_rect_as_->setSucceeded(result);
@@ -1038,12 +1036,12 @@ const std::string& ArenaCameraNodelet::cameraFrame() const {
 
 uint32_t ArenaCameraNodelet::getNumSubscribersRect() const {
   return camera_info_manager_->isCalibrated()
-             ? img_rect_pub_->getNumSubscribers()
+             ? img_rect_pub_.getNumSubscribers()
              : 0;
 }
 
 uint32_t ArenaCameraNodelet::getNumSubscribers() const {
-  return img_raw_pub_.getNumSubscribers() + img_rect_pub_->getNumSubscribers();
+  return img_raw_pub_.getNumSubscribers() + img_rect_pub_.getNumSubscribers();
 }
 
 void ArenaCameraNodelet::setupInitialCameraInfo(
@@ -1876,19 +1874,9 @@ ArenaCameraNodelet::~ArenaCameraNodelet() {
     grab_imgs_rect_as_ = nullptr;
   }
 
-  if (img_rect_pub_) {
-    delete img_rect_pub_;
-    img_rect_pub_ = nullptr;
-  }
-
   if (cv_bridge_img_rect_) {
     delete cv_bridge_img_rect_;
     cv_bridge_img_rect_ = nullptr;
-  }
-
-  if (pinhole_model_) {
-    delete pinhole_model_;
-    pinhole_model_ = nullptr;
   }
 }
 
