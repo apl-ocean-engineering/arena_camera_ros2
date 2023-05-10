@@ -153,7 +153,6 @@ add_library( ${arena_camera_lib_name}
     src/encoding_conversions.cpp
     src/arena_camera_parameter.cpp
     src/arena_camera_nodelet.cpp
-    src/arena_camera.cpp
 )
 
 target_include_directories( ${arena_camera_lib_name}

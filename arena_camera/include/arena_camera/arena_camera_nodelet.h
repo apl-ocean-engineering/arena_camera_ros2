@@ -31,6 +31,7 @@
 #define ARENA_CAMERA_ARENA_CAMERA_NODE_H
 
 // STD
+#include <memory>
 #include <string>
 
 // ROS sys dep
@@ -81,7 +82,7 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
   virtual void onInit();
 
   /**
-   * spin the node
+   * Take one image
    */
   void timerCallback(const ros::TimerEvent&);
 
@@ -100,10 +101,10 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
 
  protected:
   /**
-   * Creates the camera instance and starts the services and action servers.
+   * Creates the camera instance
    * @return false if an error occurred
    */
-  bool initAndRegister();
+  bool registerCamera(const std::string& device_id);
 
   /**
    * Start the camera and initialize the messages
@@ -271,7 +272,7 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
    * Returns true if the camera was put into sleep mode
    * @return true if in sleep mode
    */
-  bool isSleeping();
+  bool isSleeping() const { return is_sleeping_; }
 
   /**
    * Generates the subset of points on which the brightness search will be
@@ -338,7 +339,27 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
                     camera_control_msgs::SetBool::Request& req,
                     camera_control_msgs::SetBool::Response& res);
 
-  ros::NodeHandle nh_;
+  Arena::ISystem* pSystem_;
+  Arena::IDevice* pDevice_;
+  Arena::IImage* pImage_;
+  const uint8_t* pData_;
+  GenApi::INodeMap* pNodeMap_;
+
+  // Hardware accessor functions
+  // These might have originally been in arena_camera.h?
+  sensor_msgs::RegionOfInterest currentROI();
+  float currentGamma();
+  int64_t currentBinningX();
+  int64_t currentBinningY();
+  float currentGain();
+  float currentExposure();
+  std::string currentROSEncoding();
+  bool setBinningXValue(const size_t& target_binning_x,
+                        size_t& reached_binning_x);
+  bool setBinningYValue(const size_t& target_binning_y,
+                        size_t& reached_binning_y);
+  void disableAllRunningAutoBrightessFunctions();
+
   ArenaCameraParameter arena_camera_parameter_set_;
   ros::ServiceServer set_binning_srv_;
   ros::ServiceServer set_roi_srv_;
@@ -349,11 +370,9 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
   ros::ServiceServer set_sleeping_srv_;
   std::vector<ros::ServiceServer> set_user_output_srvs_;
 
-  // ArenaCamera* arena_camera_;
-
   ros::Timer image_timer_;
 
-  image_transport::ImageTransport* it_;
+  std::unique_ptr<image_transport::ImageTransport> it_;
   image_transport::CameraPublisher img_raw_pub_;
 
   ros::Publisher img_rect_pub_;
