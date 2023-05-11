@@ -40,6 +40,7 @@ namespace arena_camera {
 ArenaCameraParameter::ArenaCameraParameter()
     : camera_frame_("arena_camera"),
       device_user_id_(""),
+      serial_number_(""),
       frame_rate_(5.0),
       camera_info_url_(""),
       image_encoding_(""),
@@ -66,7 +67,7 @@ ArenaCameraParameter::ArenaCameraParameter()
       // #########################
       exposure_search_timeout_(5.),
       auto_exp_upper_lim_(0.0),
-      mtu_size_(3000),
+      mtu_size_(1400),
       inter_pkg_delay_(1000),
       shutter_mode_(SM_DEFAULT),
       auto_flash_(false) {}
@@ -78,6 +79,8 @@ void ArenaCameraParameter::readFromRosParameterServer(
   nh.param<std::string>("camera_frame", camera_frame_, "arena_camera");
 
   nh.param<std::string>("device_user_id", device_user_id_, "");
+
+  nh.param<std::string>("serial_number", serial_number_, "");
 
   if (nh.hasParam("frame_rate")) {
     nh.getParam("frame_rate", frame_rate_);
@@ -362,13 +365,14 @@ void ArenaCameraParameter::adaptDeviceUserId(
 }
 
 void ArenaCameraParameter::validateParameterSet(const ros::NodeHandle& nh) {
-  if (!device_user_id_.empty()) {
-    ROS_INFO_STREAM(
-        "Trying to open the following camera: " << device_user_id_.c_str());
-  } else {
-    ROS_INFO_STREAM("No Device User ID set -> Will open the camera device "
-                    << "found first");
-  }
+  // Put this validation closer to the point of use
+  // if (!device_user_id_.empty()) {
+  //   ROS_INFO_STREAM(
+  //       "Trying to open the following camera: " << device_user_id_.c_str());
+  // } else {
+  //   ROS_INFO_STREAM("No Device User ID set -> Will open the camera device "
+  //                   << "found first");
+  // }
 
   if (frame_rate_ < 0 && frame_rate_ != -1) {
     ROS_WARN_STREAM("Unexpected frame rate ("
@@ -403,11 +407,22 @@ void ArenaCameraParameter::validateParameterSet(const ros::NodeHandle& nh) {
     ROS_WARN_STREAM("Low timeout for exposure search detected! Exposure "
                     << "search may fail.");
   }
+
+  if (mtu_size_ < 1400) {
+    ROS_WARN_STREAM("MTU packet size too small: " << mtu_size_);
+  } else if (mtu_size_ > 11000) {
+    ROS_WARN_STREAM("MTU packet size too large: " << mtu_size_);
+  }
+
   return;
 }
 
 const std::string& ArenaCameraParameter::deviceUserID() const {
   return device_user_id_;
+}
+
+const std::string& ArenaCameraParameter::serialNumber() const {
+  return serial_number_;
 }
 
 std::string ArenaCameraParameter::shutterModeString() const {

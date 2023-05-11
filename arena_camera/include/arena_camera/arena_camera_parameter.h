@@ -65,12 +65,16 @@ class ArenaCameraParameter {
    */
   const std::string& deviceUserID() const;
 
+  const std::string& serialNumber() const;
+
   /**
    * Setter for the device_user_id_  to the class and as well
    * the ros-parameter server
    */
   void adaptDeviceUserId(const ros::NodeHandle& nh,
                          const std::string& device_user_id);
+
+  int mtuSize() const { return mtu_size_; }
 
   /**
    * Getter for the string describing the shutter mode
@@ -305,6 +309,8 @@ class ArenaCameraParameter {
    * device list will be used
    */
   std::string device_user_id_;
+
+  std::string serial_number_;
 
   /**
    * The desired publisher frame rate if listening to the topics.

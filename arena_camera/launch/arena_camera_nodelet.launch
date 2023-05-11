@@ -8,6 +8,10 @@
     <arg name="node_name" default="arena_camera_node" />
     <arg name="config_file" default="$(find arena_camera)/config/default.yaml" />
 
+    <arg name="camera_user_id" default="" />
+    <arg name="serial_number" default="" />
+
+
     <arg unless="$(arg debug)" name="launch_prefix" value="" />
     <arg     if="$(arg debug)" name="launch_prefix" value="gdb -ex run --args" />
 
@@ -25,6 +29,9 @@
     <node name="arena_camera" pkg="nodelet" type="nodelet" output="screen"
             args="load arena_camera/ArenaCameraNodelet $(arg manager)" >
         <rosparam command="load" file="$(arg config_file)" />
+
+        <param name="device_user_id" value='$(arg camera_user_id)'/>
+        <param name="serial_number" value="$(arg serial_number)" />
     </node>
 
     <!-- Disable some of the image_transport endpoints-->

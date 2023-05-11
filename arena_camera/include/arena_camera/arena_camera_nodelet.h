@@ -104,7 +104,9 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
    * Creates the camera instance
    * @return false if an error occurred
    */
-  bool registerCamera(const std::string& device_id);
+  bool registerCameraByUserId(const std::string& device_id);
+  bool registerCameraBySerialNumber(const std::string& serial_number);
+  bool registerCameraByAuto();
 
   /**
    * Start the camera and initialize the messages
@@ -341,8 +343,6 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
 
   Arena::ISystem* pSystem_;
   Arena::IDevice* pDevice_;
-  Arena::IImage* pImage_;
-  const uint8_t* pData_;
   GenApi::INodeMap* pNodeMap_;
 
   // Hardware accessor functions
@@ -380,6 +380,7 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
 
   GrabImagesAS* grab_imgs_raw_as_;
 
+  // Don't like using this global member
   sensor_msgs::Image img_raw_msg_;
 
   camera_info_manager::CameraInfoManager* camera_info_manager_;
