@@ -5,7 +5,9 @@ Based on the upstream [Arena Camera Driver](https://github.com/lucidvisionlabs/a
 
 See the full instructions at Lucid:  https://support.thinklucid.com/using-ros-for-linux/
 
-This package builds in the same way as other `catkin` ROS packages, however the [Arena SDK]() must be installed.
+This package builds in the same way as other `catkin` ROS packages, however the [Arena SDK](https://thinklucid.com/downloads-hub/) must be installed.  See the [documentation at LucidVision](https://support.thinklucid.com/using-ros-for-linux/) for additional details.
+
+
 # ROS Packages
 
 Contains three ROS packages:
@@ -16,7 +18,7 @@ Contains actions and service calls for adjusting camera settings (gain, etc).
 
 ## arena_camera
 
-A "generic" ROS node for Lucid cameras.
+A "generic" ROS node for Lucid cameras.  See the [README](arena_camera/README) in this package for more details.
 
 ## arena_imx490
 

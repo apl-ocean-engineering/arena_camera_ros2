@@ -36,14 +36,6 @@
 #include <nodelet/loader.h>
 #include <ros/ros.h>
 
-// #include <boost/thread.hpp>
-
-// // Arena
-// #include <ArenaApi.h>
-
-// // Arena node
-// #include <arena_camera/arena_camera_node.h>
-
 int main(int argc, char **argv) {
   ros::init(argc, argv, "arena_camera_node");
 
@@ -51,26 +43,8 @@ int main(int argc, char **argv) {
   nodelet::M_string remap(ros::names::getRemappings());
   nodelet::V_string nargv;
   std::string nodelet_name = ros::this_node::getName();
-  nodelet.load(nodelet_name, "arena_camera/ArenaCameraNodelet", remap, nargv);
+  nodelet.load(nodelet_name, "arena_camera/ArenaCameraPolledNodelet", remap,
+               nargv);
   ros::spin();
   return 0;
-
-  // arena_camera::ArenaCameraNode arena_camera_node;
-
-  // ros::Rate r(arena_camera_node.frameRate());
-
-  // ROS_INFO_STREAM("Start image grabbing if node connects to topic with "
-  //                 << "a frame_rate of: " << arena_camera_node.frameRate()
-  //                 << " Hz");
-
-  // // Main thread and brightness-service thread
-  // boost::thread th(boost::bind(&ros::spin));
-
-  // while (ros::ok()) {
-  //   arena_camera_node.spin();
-  //   r.sleep();
-  // }
-
-  // ROS_INFO("Terminate ArenaCameraNode");
-  // return EXIT_SUCCESS;
 }

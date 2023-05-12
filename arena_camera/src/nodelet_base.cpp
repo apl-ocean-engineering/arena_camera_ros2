@@ -397,15 +397,20 @@ bool ArenaCameraNodeletBase::startGrabbing() {
     // Arena device prior streaming settings
     //
 
-    // Set Jumbo frames (this is only relevant for GigE cameras.)
-    auto pPacketSize = pNodeMap->GetNode("DeviceStreamChannelPacketSize");
-    if (GenApi::IsWritable(pPacketSize)) {
-      NODELET_INFO_STREAM("Setting MTU to "
-                          << arena_camera_parameter_set_.mtuSize());
-      Arena::SetNodeValue<int64_t>(pNodeMap, "DeviceStreamChannelPacketSize",
-                                   arena_camera_parameter_set_.mtuSize());
-    } else {
-      NODELET_INFO("Camera MTU is not writeable");
+    if (Arena::GetNodeValue<GenICam::gcstring>(
+            pDevice_->GetNodeMap(), "DeviceTLType") == "GigEVision") {
+      NODELET_INFO("GigE device, performing GigE specific configuration");
+
+      // Set Jumbo frames (this is only relevant for GigE cameras.)
+      auto pPacketSize = pNodeMap->GetNode("DeviceStreamChannelPacketSize");
+      if (GenApi::IsWritable(pPacketSize)) {
+        NODELET_INFO_STREAM("Setting MTU to "
+                            << arena_camera_parameter_set_.mtuSize());
+        Arena::SetNodeValue<int64_t>(pNodeMap, "DeviceStreamChannelPacketSize",
+                                     arena_camera_parameter_set_.mtuSize());
+      } else {
+        NODELET_INFO("Camera MTU is not writeable");
+      }
     }
 
     auto payloadSize = Arena::GetNodeValue<int64_t>(pNodeMap, "PayloadSize");

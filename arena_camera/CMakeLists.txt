@@ -173,24 +173,32 @@ add_dependencies( ${arena_camera_lib_name}
 )
 
 #
-# ARENA_CAMERA_NODE
+# ARENA_CAMERA_NODES
 #
 
-set(arena_camera_node_name arena_camera_node)
+set(streaming_arena_camera_node streaming_arena_camera)
+set(polled_arena_camera_node polled_arena_camera)
 
-# Since this is a thin wrapper around nodelet:::oader, it
-# doesn't depend on any of the package libs
-add_executable( ${arena_camera_node_name}
-    src/node_main.cpp
+add_executable( ${streaming_arena_camera_node}
+    src/streaming_node_main.cpp
 )
 
-target_include_directories( ${arena_camera_node_name}
-    PRIVATE ${catkin_INCLUDE_DIRS}
+add_executable( ${polled_arena_camera_node}
+    src/polled_node_main.cpp
 )
 
-target_link_libraries( ${arena_camera_node_name}
-    ${catkin_LIBRARIES}
-)
+foreach( camera_node ${streaming_arena_camera_node} ${polled_arena_camera_node} )
+
+    target_include_directories( ${camera_node}
+        PRIVATE ${catkin_INCLUDE_DIRS}
+    )
+
+    target_link_libraries( ${camera_node}
+        ${catkin_LIBRARIES}
+    )
+
+endforeach()
+
 
 #
 # WRITE_DEVICE_USER_ID_TO_CAMERA
@@ -281,7 +289,8 @@ install(
 
 install(
     TARGETS
-        ${arena_camera_node_name}
+        ${streaming_arena_camera_node}
+        ${polled_arena_camera_node}
         ${write_device_user_id_to_camera}
         dump_genicam_nodes
     LIBRARY DESTINATION

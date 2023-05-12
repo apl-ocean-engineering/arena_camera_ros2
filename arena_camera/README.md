@@ -1,38 +1,29 @@
-====
-**ROS-Driver for Lucid Cameras**
-====
+# ROS-Driver for Lucid Cameras using the Arena SDK
+
 **developed by Magazino GmbH, using the arena Software Camera Suite by Lucid AG**
 
+Based on the upstream [Arena Camera Driver](https://github.com/lucidvisionlabs/arena_camera_ros) by Magazino GmbH, this node has been heavily modified for structure and stability.
+
+This package offers many functions of the Lucid arena API inside the ROS-Framwork.   This version focuses on the GigE cameras although it should be largely applicable to USB 3.0 cameras (we just don't have the hardware to test).
 
 
-This package offers many functions of the Lucid arena API inside the ROS-Framwork.
+This package includes two node/nodelets:
 
-The package supports Lucids USB 3.0, GigE as well as the DART cameras.
+* `ArenaCameraStreamingNodelet`: Publishes images to `/image_raw/` as they are received from the camera.  The camera can be triggered using an external hardware trigger, its own internal timer, a software timer in the node, or manually triggered through a service.   However, in the latter case, there is no direct link between the service trigger and the resulting image (i.e., you send the trigger, and later an image is published to `/image_raw`).  The matching node is `streaming_arena_camera`
 
-Images can continuously be published over *\/image\_raw* or the *\/image\_rect* topic.
-The latter just in case the intrinsic calibration matrices are provided through the **camera_info_url** parameter.
+* `ArenaCameraPolledNodelet`: Exposes an actionlib interfaces which allows the *synchronous* capture of images, where each trigger of the camera returns a single image, and the capture properties (exposure, brightness, etc) can be explicitly set for each image.   The matching node is `polled_arena_camera`
 
-The camera-characteristic parameter such as height, width, projection matrices and camera_frame were published over the *\/camera\_info* topic.
-Furthermore an action-based image grabbing with desired exposure, gain, gamma and / or brightness is provided.
-Hence one can grab a sequence of images with above target settings as well as a single image.
+In both cases, camera calibration information can optionally be published through the ROS-standard `/camera_info` mechanism.
 
-Adapting camera's settings regarding binning (in x and y direction), exposure, gain, gamma and brightness can be done using provided 'set_*' services.
-These changes effect the continuous image acquisition and hence the images provided through the image topics.
+Camera settings including binning (in x and y direction), exposure, gain, gamma and brightness can be done using provided 'set_*' services.
 
-The default node operates in Software-Trigger Mode.
-This means that the image acquisition is triggered with a certain rate and the camera is not running in the continuous mode.
+The package opens either a predefined camera (using either the given `device_user_id` or `serial_number` parameters) or, if no camera id is predefined the first camera device it can find.
 
-The package opens either a predefined camera (using a given 'device_user_id' parameter) or, if no camera id is predefined the first camera device it can find.
+# Installation
 
-|
+The package has been tested for ROS-Noetic.
 
-******
-**Installation**
-******
-The package has been tested for ROS-Kinetic.
-
-Please check the attached pdf for installation instructions.
-|
+The Arena SDK must be installed.  See the instructions for [Lucid Vision](https://support.thinklucid.com/using-ros-for-linux/) for general instructions on installing Arena.
 
 ******
 **Parameters**
@@ -100,20 +91,11 @@ The following settings do **NOT** have to be set. Each camera has default values
   The inter-package delay in ticks. Only used for GigE cameras. To prevent lost frames it should be greater 0. For most of GigE-Cameras, a value of 1000 is reasonable. For GigE-Cameras used on a RaspberryPI this value should be set to 11772.
 
 
-******
-**Usage**
-******
-
-The arena_camera_node can be started over the launch file which includes a config file with desired parameters as frame rate or exposure time
-
-``roslaunch arena_camera arena_camera_node.launch``     or     ``rosrun arena_camera arena_camera_node``
-
-Images were only published if another node connects to the image topic. The published images can be seen using the image_view node from the image_pipeline stack:
-
-``rosrun image_view image_view image:=/arena_camera_node/image_raw``
-
-******
-**Questions**
-******
+# Questions
 
 Please provide your questions via http://answers.ros.org/questions/ and tag them with **arena_camera**
+
+
+# LICENSE
+
+We retain the BSD 3-Clause license supplied with the upstream [arena_camera_ros](https://github.com/lucidvisionlabs/arena_camera_ros/blob/master/catkin_ws/src/arena_camera/LICENSE).   See the [LICENSE](LICENSE) file.
