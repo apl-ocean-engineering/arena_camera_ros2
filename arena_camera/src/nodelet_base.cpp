@@ -35,7 +35,6 @@
 #include <vector>
 
 // ROS
-#include <pluginlib/class_list_macros.h>
 #include <sensor_msgs/RegionOfInterest.h>
 
 #include "boost/multi_array.hpp"
@@ -56,7 +55,7 @@ namespace arena_camera {
 using sensor_msgs::CameraInfo;
 using sensor_msgs::CameraInfoPtr;
 
-ArenaCameraNodelet::ArenaCameraNodelet()
+ArenaCameraNodeletBase::ArenaCameraNodeletBase()
     : pSystem_(nullptr),
       pDevice_(nullptr),
       pNodeMap_(nullptr),
@@ -64,14 +63,13 @@ ArenaCameraNodelet::ArenaCameraNodelet()
       set_user_output_srvs_(),
       it_(nullptr),
       img_raw_pub_(),
-      grab_imgs_raw_as_(nullptr),
       pinhole_model_(),
       camera_info_manager_(nullptr),
       sampling_indices_(),
       brightness_exp_lut_(),
       is_sleeping_(false) {}
 
-ArenaCameraNodelet::~ArenaCameraNodelet() {
+ArenaCameraNodeletBase::~ArenaCameraNodeletBase() {
   if (pDevice_ != nullptr) {
     pSystem_->DestroyDevice(pDevice_);
   }
@@ -84,24 +82,24 @@ ArenaCameraNodelet::~ArenaCameraNodelet() {
 //
 // Nodelet::onInit  function
 
-void ArenaCameraNodelet::onInit() {
+void ArenaCameraNodeletBase::onInit() {
   ros::NodeHandle nh = getNodeHandle();
   ros::NodeHandle pnh = getPrivateNodeHandle();
 
   set_binning_srv_ = nh.advertiseService(
-      "set_binning", &ArenaCameraNodelet::setBinningCallback, this);
-  set_roi_srv_ =
-      nh.advertiseService("set_roi", &ArenaCameraNodelet::setROICallback, this);
+      "set_binning", &ArenaCameraNodeletBase::setBinningCallback, this);
+  set_roi_srv_ = nh.advertiseService(
+      "set_roi", &ArenaCameraNodeletBase::setROICallback, this);
   set_exposure_srv_ = nh.advertiseService(
-      "set_exposure", &ArenaCameraNodelet::setExposureCallback, this);
+      "set_exposure", &ArenaCameraNodeletBase::setExposureCallback, this);
   set_gain_srv_ = nh.advertiseService(
-      "set_gain", &ArenaCameraNodelet::setGainCallback, this);
+      "set_gain", &ArenaCameraNodeletBase::setGainCallback, this);
   set_gamma_srv_ = nh.advertiseService(
-      "set_gamma", &ArenaCameraNodelet::setGammaCallback, this);
+      "set_gamma", &ArenaCameraNodeletBase::setGammaCallback, this);
   set_brightness_srv_ = nh.advertiseService(
-      "set_brightness", &ArenaCameraNodelet::setBrightnessCallback, this);
+      "set_brightness", &ArenaCameraNodeletBase::setBrightnessCallback, this);
   set_sleeping_srv_ = nh.advertiseService(
-      "set_sleeping", &ArenaCameraNodelet::setSleepingCallback, this);
+      "set_sleeping", &ArenaCameraNodeletBase::setSleepingCallback, this);
 
   // it_ = std::make_unique<image_transport::ImageTransport>(nh);
   it_.reset(new image_transport::ImageTransport(nh));
@@ -109,18 +107,15 @@ void ArenaCameraNodelet::onInit() {
 
   camera_info_manager_ = new camera_info_manager::CameraInfoManager(nh);
 
-  grab_imgs_raw_as_ = new GrabImagesAS(
-      nh, "grab_images_raw",
-      boost::bind(&ArenaCameraNodelet::grabImagesRawActionExecuteCB, this, _1),
-      false);
-
   diagnostics_updater_.setHardwareID("none");
   diagnostics_updater_.add("camera_availability", this,
-                           &ArenaCameraNodelet::create_diagnostics);
-  diagnostics_updater_.add("intrinsic_calibration", this,
-                           &ArenaCameraNodelet::create_camera_info_diagnostics);
+                           &ArenaCameraNodeletBase::create_diagnostics);
+  diagnostics_updater_.add(
+      "intrinsic_calibration", this,
+      &ArenaCameraNodeletBase::create_camera_info_diagnostics);
   diagnostics_trigger_ = nh.createTimer(
-      ros::Duration(2), &ArenaCameraNodelet::diagnostics_timer_callback_, this);
+      ros::Duration(2), &ArenaCameraNodeletBase::diagnostics_timer_callback_,
+      this);
 
   // reading all necessary parameter to open the desired camera from the
   // ros-parameter-server. In case that invalid parameter values can be
@@ -162,12 +157,9 @@ void ArenaCameraNodelet::onInit() {
     NODELET_FATAL_STREAM("Unable to configure camera");
     return;
   }
-
-  image_timer_ = nh.createTimer(ros::Duration(1.0 / frameRate()),
-                                &ArenaCameraNodelet::timerCallback, this);
 }
 
-bool ArenaCameraNodelet::registerCameraByUserId(
+bool ArenaCameraNodeletBase::registerCameraByUserId(
     const std::string &device_user_id_to_open) {
   pSystem_ = Arena::OpenSystem();
   pSystem_->UpdateDevices(100);
@@ -208,7 +200,7 @@ bool ArenaCameraNodelet::registerCameraByUserId(
   return false;
 }
 
-bool ArenaCameraNodelet::registerCameraBySerialNumber(
+bool ArenaCameraNodeletBase::registerCameraBySerialNumber(
     const std::string &serial_number) {
   pSystem_ = Arena::OpenSystem();
   pSystem_->UpdateDevices(100);
@@ -241,7 +233,7 @@ bool ArenaCameraNodelet::registerCameraBySerialNumber(
   return false;
 }
 
-bool ArenaCameraNodelet::registerCameraByAuto() {
+bool ArenaCameraNodeletBase::registerCameraByAuto() {
   pSystem_ = Arena::OpenSystem();
   pSystem_->UpdateDevices(100);
   std::vector<Arena::DeviceInfo> deviceInfos = pSystem_->GetDevices();
@@ -266,7 +258,7 @@ bool ArenaCameraNodelet::registerCameraByAuto() {
   return true;
 }
 
-sensor_msgs::RegionOfInterest ArenaCameraNodelet::currentROI() {
+sensor_msgs::RegionOfInterest ArenaCameraNodeletBase::currentROI() {
   sensor_msgs::RegionOfInterest roi;
   // \todo{amarburg}  Broke this by getting ride of pImage_
   //                  Need to save as state?
@@ -278,7 +270,7 @@ sensor_msgs::RegionOfInterest ArenaCameraNodelet::currentROI() {
   return roi;
 }
 
-float ArenaCameraNodelet::currentGamma() {
+float ArenaCameraNodeletBase::currentGamma() {
   GenApi::CFloatPtr pGamma = pDevice_->GetNodeMap()->GetNode("Gamma");
 
   if (!pGamma || !GenApi::IsReadable(pGamma)) {
@@ -290,7 +282,7 @@ float ArenaCameraNodelet::currentGamma() {
   }
 }
 
-int64_t ArenaCameraNodelet::currentBinningX() {
+int64_t ArenaCameraNodeletBase::currentBinningX() {
   GenApi::CIntegerPtr BinningHorizontal =
       pDevice_->GetNodeMap()->GetNode("BinningHorizontal");
 
@@ -303,7 +295,7 @@ int64_t ArenaCameraNodelet::currentBinningX() {
   }
 }
 
-int64_t ArenaCameraNodelet::currentBinningY() {
+int64_t ArenaCameraNodeletBase::currentBinningY() {
   GenApi::CIntegerPtr BinningVertical =
       pDevice_->GetNodeMap()->GetNode("BinningVertical");
 
@@ -316,7 +308,7 @@ int64_t ArenaCameraNodelet::currentBinningY() {
   }
 }
 
-float ArenaCameraNodelet::currentGain() {
+float ArenaCameraNodeletBase::currentGain() {
   GenApi::CFloatPtr pGain = pDevice_->GetNodeMap()->GetNode("Gain");
 
   if (!pGain || !GenApi::IsReadable(pGain)) {
@@ -328,7 +320,7 @@ float ArenaCameraNodelet::currentGain() {
   }
 }
 
-float ArenaCameraNodelet::currentExposure() {
+float ArenaCameraNodeletBase::currentExposure() {
   GenApi::CFloatPtr pExposureTime =
       pDevice_->GetNodeMap()->GetNode("ExposureTime");
 
@@ -341,7 +333,7 @@ float ArenaCameraNodelet::currentExposure() {
   }
 }
 
-std::string ArenaCameraNodelet::currentROSEncoding() {
+std::string ArenaCameraNodeletBase::currentROSEncoding() {
   std::string gen_api_encoding(Arena::GetNodeValue<GenICam::gcstring>(
       pDevice_->GetNodeMap(), "PixelFormat"));
   std::string ros_encoding("");
@@ -356,7 +348,7 @@ std::string ArenaCameraNodelet::currentROSEncoding() {
   return ros_encoding;
 }
 
-bool ArenaCameraNodelet::setImageEncoding(const std::string &ros_encoding) {
+bool ArenaCameraNodeletBase::setImageEncoding(const std::string &ros_encoding) {
   std::string gen_api_encoding;
   bool conversion_found =
       encoding_conversions::ros2GenAPI(ros_encoding, gen_api_encoding);
@@ -396,7 +388,7 @@ bool ArenaCameraNodelet::setImageEncoding(const std::string &ros_encoding) {
   return true;
 }
 
-bool ArenaCameraNodelet::startGrabbing() {
+bool ArenaCameraNodeletBase::startGrabbing() {
   ros::NodeHandle nh = getNodeHandle();
   auto pNodeMap = pDevice_->GetNodeMap();
 
@@ -418,6 +410,14 @@ bool ArenaCameraNodelet::startGrabbing() {
 
     auto payloadSize = Arena::GetNodeValue<int64_t>(pNodeMap, "PayloadSize");
     NODELET_INFO_STREAM("Expected payload size: " << payloadSize);
+
+    // enable stream auto negotiate packet size
+    Arena::SetNodeValue<bool>(pDevice_->GetTLStreamNodeMap(),
+                              "StreamAutoNegotiatePacketSize", true);
+
+    // enable stream packet resend
+    Arena::SetNodeValue<bool>(pDevice_->GetTLStreamNodeMap(),
+                              "StreamPacketResendEnable", true);
 
     //
     // PIXELFORMAT
@@ -627,12 +627,12 @@ bool ArenaCameraNodelet::startGrabbing() {
     pDevice_->StartStream();
     bool isTriggerArmed = false;
 
-    if (GenApi::IsWritable(pTriggerMode)) {
-      do {
-        isTriggerArmed = Arena::GetNodeValue<bool>(pNodeMap, "TriggerArmed");
-      } while (isTriggerArmed == false);
-      // Arena::ExecuteNode(pNodeMap, "TriggerSoftware");
-    }
+    // if (GenApi::IsWritable(pTriggerMode)) {
+    //   do {
+    //     isTriggerArmed = Arena::GetNodeValue<bool>(pNodeMap, "TriggerArmed");
+    //   } while (isTriggerArmed == false);
+    //   // Arena::ExecuteNode(pNodeMap, "TriggerSoftware");
+    // }
 
     // pImage_ = pDevice_->GetImage(5000);
     // pData_ = pImage_->GetData();
@@ -668,8 +668,6 @@ bool ArenaCameraNodelet::startGrabbing() {
                         << "] name not valid for camera_info_manager");
   }
 
-  grab_imgs_raw_as_->start();
-
   NODELET_INFO_STREAM("Startup settings: "
                       << "encoding = '" << currentROSEncoding() << "', "
                       << "binning = [" << currentBinningX() << ", "
@@ -700,53 +698,32 @@ bool ArenaCameraNodelet::startGrabbing() {
 //   CameraPublisherImpl *impl_;
 // };
 
-// void ArenaCameraNodelet::spin() {
-void ArenaCameraNodelet::timerCallback(const ros::TimerEvent &) {
-  if (camera_info_manager_->isCalibrated()) {
-    NODELET_INFO_ONCE("Camera is calibrated");
-  } else {
-    NODELET_INFO_ONCE("Camera not calibrated");
-  }
+bool ArenaCameraNodeletBase::triggerImage() {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
+  bool retval = false;
 
-  if (pDevice_->IsConnected() == false) {
-    NODELET_ERROR("Arena camera has been removed, giving up!");
-    image_timer_.stop();
-    return;
+  try {
+    GenApi::CStringPtr pTriggerMode =
+        pDevice_->GetNodeMap()->GetNode("TriggerMode");
 
-    // NODELET_ERROR("Arena camera has been removed, trying to reset");
-    //  pSystem_->DestroyDevice(pDevice_);
-    //  pDevice_ = nullptr;
-    //  Arena::CloseSystem(pSystem_);
-    //  pSystem_ = nullptr;
-    //  for (ros::ServiceServer& user_output_srv : set_user_output_srvs_) {
-    //    user_output_srv.shutdown();
-    //  }
-    //  ros::Duration(0.5).sleep();  // sleep for half a second
-    //  init();
-    //  return;
-  }
+    if (GenApi::IsWritable(pTriggerMode)) {
+      bool isTriggerArmed = false;
 
-  if (!isSleeping() && (img_raw_pub_.getNumSubscribers())) {
-    if (!grabImage()) {
-      NODELET_WARN("Failed to get image");
-      return;
+      do {
+        isTriggerArmed =
+            Arena::GetNodeValue<bool>(pDevice_->GetNodeMap(), "TriggerArmed");
+      } while (isTriggerArmed == false);
+      Arena::ExecuteNode(pDevice_->GetNodeMap(), "TriggerSoftware");
     }
-
-    if (img_raw_pub_.getNumSubscribers() > 0) {
-      // Create a new cam_info-object in every frame, because it might have
-      // changed due to a 'set_camera_info'-service call
-      sensor_msgs::CameraInfo cam_info =
-          sensor_msgs::CameraInfo(camera_info_manager_->getCameraInfo());
-      cam_info.header.stamp = img_raw_msg_.header.stamp;
-
-      // Publish via image_transport
-      img_raw_pub_.publish(img_raw_msg_, cam_info);
-    }
+  } catch (GenICam::GenericException &e) {
+    ;
   }
+
+  return true;
 }
 
-bool ArenaCameraNodelet::grabImage() {
-  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
+bool ArenaCameraNodeletBase::grabImage() {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
   bool retval = false;
 
   try {
@@ -773,9 +750,9 @@ bool ArenaCameraNodelet::grabImage() {
         const auto payload_size =
             Arena::GetNodeValue<int64_t>(node_map, "PayloadSize");
         if (pBuffer->DataLargerThanBuffer()) {
-          ROS_WARN_STREAM("Image incomplete: data larger than buffer;  "
-                          << pBuffer->GetSizeOfBuffer() << " > "
-                          << payload_size);
+          NODELET_WARN_STREAM("Image incomplete: data larger than buffer;  "
+                              << pBuffer->GetSizeOfBuffer() << " > "
+                              << payload_size);
         } else {
           NODELET_WARN_STREAM("Image incomplete: Payload size = "
                               << pBuffer->GetSizeFilled() << " , buffer size = "
@@ -818,221 +795,14 @@ bool ArenaCameraNodelet::grabImage() {
   return retval;
 }
 
-void ArenaCameraNodelet::grabImagesRawActionExecuteCB(
-    const camera_control_msgs::GrabImagesGoal::ConstPtr &goal) {
-  camera_control_msgs::GrabImagesResult result;
-  result = grabImagesRaw(goal, grab_imgs_raw_as_);
-  grab_imgs_raw_as_->setSucceeded(result);
-}
-
-camera_control_msgs::GrabImagesResult ArenaCameraNodelet::grabImagesRaw(
-    const camera_control_msgs::GrabImagesGoal::ConstPtr &goal,
-    GrabImagesAS *action_server) {
-  camera_control_msgs::GrabImagesResult result;
-  camera_control_msgs::GrabImagesFeedback feedback;
-
-#if DEBUG
-  std::cout << *goal << std::endl;
-#endif
-
-  if (goal->exposure_given && goal->exposure_times.empty()) {
-    NODELET_ERROR_STREAM(
-        "GrabImagesRaw action server received request and "
-        << "'exposure_given' is true, but the 'exposure_times' vector is "
-        << "empty! Not enough information to execute acquisition!");
-    result.success = false;
-    return result;
-  }
-
-  if (goal->gain_given && goal->gain_values.empty()) {
-    NODELET_ERROR_STREAM(
-        "GrabImagesRaw action server received request and "
-        << "'gain_given' is true, but the 'gain_values' vector is "
-        << "empty! Not enough information to execute acquisition!");
-    result.success = false;
-    return result;
-  }
-
-  if (goal->brightness_given && goal->brightness_values.empty()) {
-    NODELET_ERROR_STREAM(
-        "GrabImagesRaw action server received request and "
-        << "'brightness_given' is true, but the 'brightness_values' vector"
-        << " is empty! Not enough information to execute acquisition!");
-    result.success = false;
-    return result;
-  }
-
-  if (goal->gamma_given && goal->gamma_values.empty()) {
-    NODELET_ERROR_STREAM(
-        "GrabImagesRaw action server received request and "
-        << "'gamma_given' is true, but the 'gamma_values' vector is "
-        << "empty! Not enough information to execute acquisition!");
-    result.success = false;
-    return result;
-  }
-
-  std::vector<size_t> candidates;
-  candidates.resize(4);  // gain, exposure, gamma, brightness
-  candidates.at(0) = goal->gain_given ? goal->gain_values.size() : 0;
-  candidates.at(1) = goal->exposure_given ? goal->exposure_times.size() : 0;
-  candidates.at(2) =
-      goal->brightness_given ? goal->brightness_values.size() : 0;
-  candidates.at(3) = goal->gamma_given ? goal->gamma_values.size() : 0;
-
-  size_t n_images = *std::max_element(candidates.begin(), candidates.end());
-
-  if (goal->exposure_given && goal->exposure_times.size() != n_images) {
-    NODELET_ERROR_STREAM(
-        "Size of requested exposure times does not match to "
-        << "the size of the requested vaules of brightness, gain or "
-        << "gamma! Can't grab!");
-    result.success = false;
-    return result;
-  }
-
-  if (goal->gain_given && goal->gain_values.size() != n_images) {
-    NODELET_ERROR_STREAM(
-        "Size of requested gain values does not match to "
-        << "the size of the requested exposure times or the vaules of "
-        << "brightness or gamma! Can't grab!");
-    result.success = false;
-    return result;
-  }
-
-  if (goal->gamma_given && goal->gamma_values.size() != n_images) {
-    NODELET_ERROR_STREAM(
-        "Size of requested gamma values does not match to "
-        << "the size of the requested exposure times or the vaules of "
-        << "brightness or gain! Can't grab!");
-    result.success = false;
-    return result;
-  }
-
-  if (goal->brightness_given && goal->brightness_values.size() != n_images) {
-    NODELET_ERROR_STREAM(
-        "Size of requested brightness values does not match to "
-        << "the size of the requested exposure times or the vaules of gain "
-           "or "
-        << "gamma! Can't grab!");
-    result.success = false;
-    return result;
-  }
-
-  if (goal->brightness_given && !(goal->exposure_auto || goal->gain_auto)) {
-    NODELET_ERROR_STREAM(
-        "Error while executing the GrabImagesRawAction: A "
-        << "target brightness is provided but Exposure time AND gain are "
-        << "declared as fix, so its impossible to reach the brightness");
-    result.success = false;
-    return result;
-  }
-
-  result.images.resize(n_images);
-  result.reached_exposure_times.resize(n_images);
-  result.reached_gain_values.resize(n_images);
-  result.reached_gamma_values.resize(n_images);
-  result.reached_brightness_values.resize(n_images);
-
-  result.success = true;
-
-  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
-
-  float previous_exp, previous_gain, previous_gamma;
-  if (goal->exposure_given) {
-    previous_exp =
-        Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureTime");
-  }
-  if (goal->gain_given) {
-    previous_gain = currentGain();
-  }
-  if (goal->gamma_given) {
-    previous_gamma = currentGamma();
-  }
-  if (goal->brightness_given) {
-    previous_gain = currentGain();
-    previous_exp = currentExposure();
-  }
-
-  for (std::size_t i = 0; i < n_images; ++i) {
-    if (goal->exposure_given) {
-      result.success = setExposure(goal->exposure_times[i],
-                                   result.reached_exposure_times[i]);
-    }
-    if (goal->gain_given) {
-      result.success =
-          setGain(goal->gain_values[i], result.reached_gain_values[i]);
-    }
-    if (goal->gamma_given) {
-      result.success =
-          setGamma(goal->gamma_values[i], result.reached_gamma_values[i]);
-    }
-    if (goal->brightness_given) {
-      int reached_brightness;
-      result.success =
-          setBrightness(goal->brightness_values[i], reached_brightness,
-                        goal->exposure_auto, goal->gain_auto);
-      result.reached_brightness_values[i] =
-          static_cast<float>(reached_brightness);
-      //    result.reached_exposure_times[i] = currentExposure();
-      //    result.reached_gain_values[i] = currentGain();
-    }
-    if (!result.success) {
-      NODELET_ERROR_STREAM(
-          "Error while setting one of the desired image "
-          << "properties in the GrabImagesRawActionCB. Aborting!");
-      break;
-    }
-
-    // \todo{amarburg}  What is this?
-    // sensor_msgs::Image &img = result.images[i];
-    // img.encoding = currentROSEncoding();
-    // img.height = pImage_->GetHeight();
-    // img.width = pImage_->GetWidth();
-    // // step = full row length in bytes, img_size = (step * rows),
-    // // imagePixelDepth already contains the number of channels
-    // img_raw_msg_.step = img_raw_msg_.width * (pImage_->GetBitsPerPixel() /
-    // 8);
-
-    // img.header.stamp = ros::Time::now();
-    // img.header.frame_id = cameraFrame();
-    feedback.curr_nr_images_taken = i + 1;
-
-    if (action_server != nullptr) {
-      action_server->publishFeedback(feedback);
-    }
-  }
-  if (camera_info_manager_) {
-    sensor_msgs::CameraInfoPtr cam_info(
-        new sensor_msgs::CameraInfo(camera_info_manager_->getCameraInfo()));
-    result.cam_info = *cam_info;
-  }
-
-  // restore previous settings:
-  float reached_val;
-  if (goal->exposure_given) {
-    setExposure(previous_exp, reached_val);
-  }
-  if (goal->gain_given) {
-    setGain(previous_gain, reached_val);
-  }
-  if (goal->gamma_given) {
-    setGamma(previous_gamma, reached_val);
-  }
-  if (goal->brightness_given) {
-    setGain(previous_gain, reached_val);
-    setExposure(previous_exp, reached_val);
-  }
-  return result;
-}
-
-bool ArenaCameraNodelet::setUserOutputCB(
+bool ArenaCameraNodeletBase::setUserOutputCB(
     const int output_id, camera_control_msgs::SetBool::Request &req,
     camera_control_msgs::SetBool::Response &res) {
   //  res.success = arena_camera_->setUserOutput(output_id, req.data);
   return true;
 }
 
-bool ArenaCameraNodelet::setAutoflash(
+bool ArenaCameraNodeletBase::setAutoflash(
     const int output_id, camera_control_msgs::SetBool::Request &req,
     camera_control_msgs::SetBool::Response &res) {
   NODELET_INFO("AutoFlashCB: %i -> %i", output_id, req.data);
@@ -1043,19 +813,19 @@ bool ArenaCameraNodelet::setAutoflash(
   return true;
 }
 
-const double &ArenaCameraNodelet::frameRate() const {
+const double &ArenaCameraNodeletBase::frameRate() const {
   return arena_camera_parameter_set_.frameRate();
 }
 
-const std::string &ArenaCameraNodelet::cameraFrame() const {
+const std::string &ArenaCameraNodeletBase::cameraFrame() const {
   return arena_camera_parameter_set_.cameraFrame();
 }
 
-uint32_t ArenaCameraNodelet::getNumSubscribers() const {
+uint32_t ArenaCameraNodeletBase::getNumSubscribers() const {
   return img_raw_pub_.getNumSubscribers();
 }
 
-void ArenaCameraNodelet::setupInitialCameraInfo(
+void ArenaCameraNodeletBase::setupInitialCameraInfo(
     sensor_msgs::CameraInfo &cam_info_msg) {
   std_msgs::Header header;
   header.frame_id = arena_camera_parameter_set_.cameraFrame();
@@ -1068,9 +838,8 @@ void ArenaCameraNodelet::setupInitialCameraInfo(
   cam_info_msg.header = header;
 
   // The image dimensions with which the camera was calibrated. Normally
-  // this will be the full camera resolution in pixels. They remain fix, even
-  // if binning is applied
-  // rows and colums
+  // this will be the full camera resolution in pixels. They remain fix,
+  // even if binning is applied rows and colums
   cam_info_msg.height =
       Arena::GetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height");
   cam_info_msg.width =
@@ -1079,24 +848,25 @@ void ArenaCameraNodelet::setupInitialCameraInfo(
   // The distortion model used. Supported models are listed in
   // sensor_msgs/distortion_models.h. For most cameras, "plumb_bob" - a
   // simple model of radial and tangential distortion - is sufficient.
-  // Empty D and distortion_model indicate that the CameraInfo cannot be used
-  // to rectify points or images, either because the camera is not calibrated
-  // or because the rectified image was produced using an unsupported
-  // distortion model, e.g. the proprietary one used by Bumblebee cameras
-  // [http://www.ros.org/reps/rep-0104.html].
+  // Empty D and distortion_model indicate that the CameraInfo cannot be
+  // used to rectify points or images, either because the camera is not
+  // calibrated or because the rectified image was produced using an
+  // unsupported distortion model, e.g. the proprietary one used by
+  // Bumblebee cameras [http://www.ros.org/reps/rep-0104.html].
   cam_info_msg.distortion_model = "";
 
   // The distortion parameters, size depending on the distortion model.
-  // For "plumb_bob", the 5 parameters are: (k1, k2, t1, t2, k3) -> float64[]
-  // D.
+  // For "plumb_bob", the 5 parameters are: (k1, k2, t1, t2, k3) ->
+  // float64[] D.
   cam_info_msg.D = std::vector<double>(5, 0.);
 
   // Intrinsic camera matrix for the raw (distorted) images.
   //     [fx  0 cx]
   // K = [ 0 fy cy]  --> 3x3 row-major matrix
   //     [ 0  0  1]
-  // Projects 3D points in the camera coordinate frame to 2D pixel coordinates
-  // using the focal lengths (fx, fy) and principal point (cx, cy).
+  // Projects 3D points in the camera coordinate frame to 2D pixel
+  // coordinates using the focal lengths (fx, fy) and principal point (cx,
+  // cy).
   cam_info_msg.K.assign(0.0);
 
   // Rectification matrix (stereo cameras only)
@@ -1109,22 +879,21 @@ void ArenaCameraNodelet::setupInitialCameraInfo(
   //     [fx'  0  cx' Tx]
   // P = [ 0  fy' cy' Ty]  --> # 3x4 row-major matrix
   //     [ 0   0   1   0]
-  // By convention, this matrix specifies the intrinsic (camera) matrix of the
-  // processed (rectified) image. That is, the left 3x3 portion is the normal
-  // camera intrinsic matrix for the rectified image. It projects 3D points
-  // in the camera coordinate frame to 2D pixel coordinates using the focal
-  // lengths (fx', fy') and principal point (cx', cy') - these may differ from
-  // the values in K. For monocular cameras, Tx = Ty = 0. Normally, monocular
-  // cameras will also have R = the identity and P[1:3,1:3] = K.
-  // For a stereo pair, the fourth column [Tx Ty 0]' is related to the
-  // position of the optical center of the second camera in the first
-  // camera's frame. We assume Tz = 0 so both cameras are in the same
-  // stereo image plane. The first camera always has Tx = Ty = 0.
-  // For the right (second) camera of a horizontal stereo pair,
-  // Ty = 0 and Tx = -fx' * B, where B is the baseline between the cameras.
-  // Given a 3D point [X Y Z]', the projection (x, y) of the point onto the
-  // rectified image is given by:
-  // [u v w]' = P * [X Y Z 1]'
+  // By convention, this matrix specifies the intrinsic (camera) matrix of
+  // the processed (rectified) image. That is, the left 3x3 portion is the
+  // normal camera intrinsic matrix for the rectified image. It projects 3D
+  // points in the camera coordinate frame to 2D pixel coordinates using the
+  // focal lengths (fx', fy') and principal point (cx', cy') - these may
+  // differ from the values in K. For monocular cameras, Tx = Ty = 0.
+  // Normally, monocular cameras will also have R = the identity and
+  // P[1:3,1:3] = K. For a stereo pair, the fourth column [Tx Ty 0]' is
+  // related to the position of the optical center of the second camera in
+  // the first camera's frame. We assume Tz = 0 so both cameras are in the
+  // same stereo image plane. The first camera always has Tx = Ty = 0. For
+  // the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx =
+  // -fx' * B, where B is the baseline between the cameras. Given a 3D point
+  // [X Y Z]', the projection (x, y) of the point onto the rectified image
+  // is given by: [u v w]' = P * [X Y Z 1]'
   //        x = u / w
   //        y = v / w
   //  This holds for both images of a stereo pair.
@@ -1139,26 +908,29 @@ void ArenaCameraNodelet::setupInitialCameraInfo(
   //  cam_info_msg.binning_y = currentBinningY();
 
   // Region of interest (subwindow of full camera resolution), given in full
-  // resolution (unbinned) image coordinates. A particular ROI always denotes
-  // the same window of pixels on the camera sensor, regardless of binning
-  // settings. The default setting of roi (all values 0) is considered the
-  // same as full resolution (roi.width = width, roi.height = height).
+  // resolution (unbinned) image coordinates. A particular ROI always
+  // denotes the same window of pixels on the camera sensor, regardless of
+  // binning settings. The default setting of roi (all values 0) is
+  // considered the same as full resolution (roi.width = width, roi.height =
+  // height).
 
   // todo? do these has ti be set via
-  // Arena::GetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX"); or so ?
+  // Arena::GetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX"); or so
+  // ?
   cam_info_msg.roi.x_offset = cam_info_msg.roi.y_offset = 0;
   cam_info_msg.roi.height = cam_info_msg.roi.width = 0;
 }
 
-bool ArenaCameraNodelet::setROI(const sensor_msgs::RegionOfInterest target_roi,
-                                sensor_msgs::RegionOfInterest &reached_roi) {
-  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
+bool ArenaCameraNodeletBase::setROI(
+    const sensor_msgs::RegionOfInterest target_roi,
+    sensor_msgs::RegionOfInterest &reached_roi) {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
   // TODO: set ROI
   return true;
 }
 
-bool ArenaCameraNodelet::setBinningXValue(const size_t &target_binning_x,
-                                          size_t &reached_binning_x) {
+bool ArenaCameraNodeletBase::setBinningXValue(const size_t &target_binning_x,
+                                              size_t &reached_binning_x) {
   try {
     GenApi::CIntegerPtr pBinningHorizontal =
         pDevice_->GetNodeMap()->GetNode("BinningHorizontal");
@@ -1196,9 +968,9 @@ bool ArenaCameraNodelet::setBinningXValue(const size_t &target_binning_x,
   return true;
 }
 
-bool ArenaCameraNodelet::setBinningX(const size_t &target_binning_x,
-                                     size_t &reached_binning_x) {
-  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
+bool ArenaCameraNodeletBase::setBinningX(const size_t &target_binning_x,
+                                         size_t &reached_binning_x) {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
 
   if (!setBinningXValue(target_binning_x, reached_binning_x)) {
     // retry till timeout
@@ -1229,8 +1001,8 @@ bool ArenaCameraNodelet::setBinningX(const size_t &target_binning_x,
   return true;
 }
 
-bool ArenaCameraNodelet::setBinningYValue(const size_t &target_binning_y,
-                                          size_t &reached_binning_y) {
+bool ArenaCameraNodeletBase::setBinningYValue(const size_t &target_binning_y,
+                                              size_t &reached_binning_y) {
   try {
     GenApi::CIntegerPtr pBinningVertical =
         pDevice_->GetNodeMap()->GetNode("BinningVertical");
@@ -1268,9 +1040,9 @@ bool ArenaCameraNodelet::setBinningYValue(const size_t &target_binning_y,
   return true;
 }
 
-bool ArenaCameraNodelet::setBinningY(const size_t &target_binning_y,
-                                     size_t &reached_binning_y) {
-  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
+bool ArenaCameraNodeletBase::setBinningY(const size_t &target_binning_y,
+                                         size_t &reached_binning_y) {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
 
   if (!setBinningYValue(target_binning_y, reached_binning_y)) {
     // retry till timeout
@@ -1302,7 +1074,7 @@ bool ArenaCameraNodelet::setBinningY(const size_t &target_binning_y,
   return true;
 }
 
-bool ArenaCameraNodelet::setBinningCallback(
+bool ArenaCameraNodeletBase::setBinningCallback(
     camera_control_msgs::SetBinning::Request &req,
     camera_control_msgs::SetBinning::Response &res) {
   size_t reached_binning_x, reached_binning_y;
@@ -1314,15 +1086,15 @@ bool ArenaCameraNodelet::setBinningCallback(
   return true;
 }
 
-bool ArenaCameraNodelet::setROICallback(
+bool ArenaCameraNodeletBase::setROICallback(
     camera_control_msgs::SetROI::Request &req,
     camera_control_msgs::SetROI::Response &res) {
   res.success = setROI(req.target_roi, res.reached_roi);
   return true;
 }
 
-bool ArenaCameraNodelet::setExposureValue(const float &target_exposure,
-                                          float &reached_exposure) {
+bool ArenaCameraNodeletBase::setExposureValue(const float &target_exposure,
+                                              float &reached_exposure) {
   try {
     Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(),
                                            "ExposureAuto", "Off");
@@ -1363,16 +1135,17 @@ bool ArenaCameraNodelet::setExposureValue(const float &target_exposure,
   return true;
 }
 
-bool ArenaCameraNodelet::setExposure(const float &target_exposure,
-                                     float &reached_exposure) {
-  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
+bool ArenaCameraNodeletBase::setExposure(const float &target_exposure,
+                                         float &reached_exposure) {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
   // if ( !pylon_camera_->isReady() )
   // {
-  //     NODELET_WARN("Error in setExposure(): pylon_camera_ is not ready!");
-  //     return false;
+  //     NODELET_WARN("Error in setExposure(): pylon_camera_ is not
+  //     ready!"); return false;
   // }
 
-  if (ArenaCameraNodelet::setExposureValue(target_exposure, reached_exposure)) {
+  if (ArenaCameraNodeletBase::setExposureValue(target_exposure,
+                                               reached_exposure)) {
     // success if the delta is smaller then the exposure step
     return true;
   } else  // retry till timeout
@@ -1381,8 +1154,8 @@ bool ArenaCameraNodelet::setExposure(const float &target_exposure,
     ros::Rate r(10.0);
     ros::Time timeout(ros::Time::now() + ros::Duration(5.0));
     while (ros::ok()) {
-      if (ArenaCameraNodelet::setExposureValue(target_exposure,
-                                               reached_exposure)) {
+      if (ArenaCameraNodeletBase::setExposureValue(target_exposure,
+                                                   reached_exposure)) {
         // success if the delta is smaller then the exposure step
         return true;
       }
@@ -1398,15 +1171,15 @@ bool ArenaCameraNodelet::setExposure(const float &target_exposure,
   }
 }
 
-bool ArenaCameraNodelet::setExposureCallback(
+bool ArenaCameraNodeletBase::setExposureCallback(
     camera_control_msgs::SetExposure::Request &req,
     camera_control_msgs::SetExposure::Response &res) {
   res.success = setExposure(req.target_exposure, res.reached_exposure);
   return true;
 }
 
-bool ArenaCameraNodelet::setGainValue(const float &target_gain,
-                                      float &reached_gain) {
+bool ArenaCameraNodeletBase::setGainValue(const float &target_gain,
+                                          float &reached_gain) {
   try {
     Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto",
                                            "Off");
@@ -1441,16 +1214,16 @@ bool ArenaCameraNodelet::setGainValue(const float &target_gain,
   return true;
 }
 
-bool ArenaCameraNodelet::setGain(const float &target_gain,
-                                 float &reached_gain) {
-  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
+bool ArenaCameraNodeletBase::setGain(const float &target_gain,
+                                     float &reached_gain) {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
   // if ( !arena_camera_->isReady() )
   // {
-  //         NODELET_WARN("Error in setGain(): arena_camera_ is not ready!");
-  //         return false;
+  //         NODELET_WARN("Error in setGain(): arena_camera_ is not
+  //         ready!"); return false;
   // }
   //
-  if (ArenaCameraNodelet::setGainValue(target_gain, reached_gain)) {
+  if (ArenaCameraNodeletBase::setGainValue(target_gain, reached_gain)) {
     return true;
   } else  // retry till timeout
   {
@@ -1458,7 +1231,7 @@ bool ArenaCameraNodelet::setGain(const float &target_gain,
     ros::Rate r(10.0);
     ros::Time timeout(ros::Time::now() + ros::Duration(5.0));
     while (ros::ok()) {
-      if (ArenaCameraNodelet::setGainValue(target_gain, reached_gain)) {
+      if (ArenaCameraNodeletBase::setGainValue(target_gain, reached_gain)) {
         return true;
       }
 
@@ -1473,14 +1246,14 @@ bool ArenaCameraNodelet::setGain(const float &target_gain,
   }
 }
 
-bool ArenaCameraNodelet::setGainCallback(
+bool ArenaCameraNodeletBase::setGainCallback(
     camera_control_msgs::SetGain::Request &req,
     camera_control_msgs::SetGain::Response &res) {
   res.success = setGain(req.target_gain, res.reached_gain);
   return true;
 }
 
-void ArenaCameraNodelet::disableAllRunningAutoBrightessFunctions() {
+void ArenaCameraNodeletBase::disableAllRunningAutoBrightessFunctions() {
   GenApi::CStringPtr pExposureAuto = pNodeMap_->GetNode("ExposureAuto");
   GenApi::CStringPtr pGainAuto = pNodeMap_->GetNode("GainAuto");
   if (!pExposureAuto || !GenApi::IsWritable(pExposureAuto) || !pGainAuto ||
@@ -1497,8 +1270,8 @@ void ArenaCameraNodelet::disableAllRunningAutoBrightessFunctions() {
   }
 }
 
-bool ArenaCameraNodelet::setGammaValue(const float &target_gamma,
-                                       float &reached_gamma) {
+bool ArenaCameraNodeletBase::setGammaValue(const float &target_gamma,
+                                           float &reached_gamma) {
   // for GigE cameras you have to enable gamma first
 
   GenApi::CBooleanPtr pGammaEnable =
@@ -1537,10 +1310,10 @@ bool ArenaCameraNodelet::setGammaValue(const float &target_gamma,
   return true;
 }
 
-bool ArenaCameraNodelet::setGamma(const float &target_gamma,
-                                  float &reached_gamma) {
-  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
-  if (ArenaCameraNodelet::setGammaValue(target_gamma, reached_gamma)) {
+bool ArenaCameraNodeletBase::setGamma(const float &target_gamma,
+                                      float &reached_gamma) {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
+  if (ArenaCameraNodeletBase::setGammaValue(target_gamma, reached_gamma)) {
     return true;
   } else  // retry till timeout
   {
@@ -1548,7 +1321,7 @@ bool ArenaCameraNodelet::setGamma(const float &target_gamma,
     ros::Rate r(10.0);
     ros::Time timeout(ros::Time::now() + ros::Duration(5.0));
     while (ros::ok()) {
-      if (ArenaCameraNodelet::setGammaValue(target_gamma, reached_gamma)) {
+      if (ArenaCameraNodeletBase::setGammaValue(target_gamma, reached_gamma)) {
         return true;
       }
 
@@ -1564,18 +1337,18 @@ bool ArenaCameraNodelet::setGamma(const float &target_gamma,
   return true;
 }
 
-bool ArenaCameraNodelet::setGammaCallback(
+bool ArenaCameraNodeletBase::setGammaCallback(
     camera_control_msgs::SetGamma::Request &req,
     camera_control_msgs::SetGamma::Response &res) {
   res.success = setGamma(req.target_gamma, res.reached_gamma);
   return true;
 }
 
-bool ArenaCameraNodelet::setBrightness(const int &target_brightness,
-                                       int &reached_brightness,
-                                       const bool &exposure_auto,
-                                       const bool &gain_auto) {
-  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
+bool ArenaCameraNodeletBase::setBrightness(const int &target_brightness,
+                                           int &reached_brightness,
+                                           const bool &exposure_auto,
+                                           const bool &gain_auto) {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
   ros::Time begin =
       ros::Time::now();  // time measurement for the exposure search
 
@@ -1670,9 +1443,9 @@ bool ArenaCameraNodelet::setBrightness(const int &target_brightness,
   while (ros::ok()) {
     // calling setBrightness in every cycle would not be necessary for the
     // arena auto brightness search. But for the case that the target
-    // brightness is out of the arena range which is from [50 - 205] a binary
-    // exposure search will be executed where we have to update the search
-    // parameter in every cycle if (
+    // brightness is out of the arena range which is from [50 - 205] a
+    // binary exposure search will be executed where we have to update the
+    // search parameter in every cycle if (
     // !arena_camera_->setBrightness(target_brightness_co,
     //                                    current_brightness,
     //                                    exposure_auto,
@@ -1688,7 +1461,8 @@ bool ArenaCameraNodelet::setBrightness(const int &target_brightness,
 
     // if ( arena_camera_->isArenaAutoBrightnessFunctionRunning() )
     // {
-    //         // do nothing if the arena auto function is running, we need to
+    //         // do nothing if the arena auto function is running, we need
+    //         to
     //         // wait till it's finished
     //         /*
     //            NODELET_DEBUG_STREAM("ArenaAutoBrightnessFunction still
@@ -1764,7 +1538,7 @@ bool ArenaCameraNodelet::setBrightness(const int &target_brightness,
   return is_brightness_reached;
 }
 
-bool ArenaCameraNodelet::setBrightnessCallback(
+bool ArenaCameraNodeletBase::setBrightnessCallback(
     camera_control_msgs::SetBrightness::Request &req,
     camera_control_msgs::SetBrightness::Response &res) {
   res.success = setBrightness(req.target_brightness, res.reached_brightness,
@@ -1782,10 +1556,9 @@ bool ArenaCameraNodelet::setBrightnessCallback(
   return true;
 }
 
-void ArenaCameraNodelet::setupSamplingIndices(std::vector<std::size_t> &indices,
-                                              std::size_t rows,
-                                              std::size_t cols,
-                                              int downsampling_factor) {
+void ArenaCameraNodeletBase::setupSamplingIndices(
+    std::vector<std::size_t> &indices, std::size_t rows, std::size_t cols,
+    int downsampling_factor) {
   indices.clear();
   std::size_t min_window_height =
       static_cast<float>(rows) / static_cast<float>(downsampling_factor);
@@ -1798,7 +1571,7 @@ void ArenaCameraNodelet::setupSamplingIndices(std::vector<std::size_t> &indices,
   return;
 }
 
-void ArenaCameraNodelet::genSamplingIndicesRec(
+void ArenaCameraNodeletBase::genSamplingIndicesRec(
     std::vector<std::size_t> &indices, const std::size_t &min_window_height,
     const cv::Point2i &s,  // start
     const cv::Point2i &e)  // end
@@ -1837,8 +1610,8 @@ void ArenaCameraNodelet::genSamplingIndicesRec(
   return;
 }
 
-float ArenaCameraNodelet::calcCurrentBrightness() {
-  boost::lock_guard<boost::recursive_mutex> lock(grab_mutex_);
+float ArenaCameraNodeletBase::calcCurrentBrightness() {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
   if (img_raw_msg_.data.empty()) {
     return 0.0;
   }
@@ -1862,7 +1635,7 @@ float ArenaCameraNodelet::calcCurrentBrightness() {
   return sum;
 }
 
-bool ArenaCameraNodelet::setSleepingCallback(
+bool ArenaCameraNodeletBase::setSleepingCallback(
     camera_control_msgs::SetSleeping::Request &req,
     camera_control_msgs::SetSleeping::Response &res) {
   is_sleeping_ = req.set_sleeping;
@@ -1881,10 +1654,10 @@ bool ArenaCameraNodelet::setSleepingCallback(
 //  ROS Disagnostics callbacks
 //
 
-void ArenaCameraNodelet::create_diagnostics(
+void ArenaCameraNodeletBase::create_diagnostics(
     diagnostic_updater::DiagnosticStatusWrapper &stat) {}
 
-void ArenaCameraNodelet::create_camera_info_diagnostics(
+void ArenaCameraNodeletBase::create_camera_info_diagnostics(
     diagnostic_updater::DiagnosticStatusWrapper &stat) {
   if (camera_info_manager_->isCalibrated()) {
     stat.summaryf(DiagnosticStatus::OK, "Intrinsic calibration found");
@@ -1893,10 +1666,9 @@ void ArenaCameraNodelet::create_camera_info_diagnostics(
   }
 }
 
-void ArenaCameraNodelet::diagnostics_timer_callback_(const ros::TimerEvent &) {
+void ArenaCameraNodeletBase::diagnostics_timer_callback_(
+    const ros::TimerEvent &) {
   diagnostics_updater_.update();
 }
 
 }  // namespace arena_camera
-
-PLUGINLIB_EXPORT_CLASS(arena_camera::ArenaCameraNodelet, nodelet::Nodelet)

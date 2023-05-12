@@ -70,21 +70,16 @@ typedef actionlib::SimpleActionServer<camera_control_msgs::GrabImagesAction>
 /**
  * The ROS-node of the arena_camera interface
  */
-class ArenaCameraNodelet : public nodelet::Nodelet {
+class ArenaCameraNodeletBase : public nodelet::Nodelet {
  public:
-  ArenaCameraNodelet();
-  virtual ~ArenaCameraNodelet();
+  ArenaCameraNodeletBase();
+  virtual ~ArenaCameraNodeletBase();
 
   /**
    * initialize the camera and the ros node.
    * calls ros::shutdown if an error occurs.
    */
-  virtual void onInit();
-
-  /**
-   * Take one image
-   */
-  void timerCallback(const ros::TimerEvent&);
+  void onInit() override;
 
   /**
    * Getter for the frame rate set by the launch script or from the ros
@@ -120,6 +115,8 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
    * Returns the total number of subscribers on any advertised image topic.
    */
   uint32_t getNumSubscribers() const;
+
+  virtual bool triggerImage();
 
   /**
    * Grabs an image and stores the image in img_raw_msg_
@@ -301,20 +298,6 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
    */
   float calcCurrentBrightness();
 
-  /**
-   * Callback for the grab images action
-   * @param goal the goal
-   */
-  void grabImagesRawActionExecuteCB(
-      const camera_control_msgs::GrabImagesGoal::ConstPtr& goal);
-
-  /**
-   * This function can also be called from the derived ArenaCameraOpenCV-Class
-   */
-  camera_control_msgs::GrabImagesResult grabImagesRaw(
-      const camera_control_msgs::GrabImagesGoal::ConstPtr& goal,
-      GrabImagesAS* action_server);
-
   void initCalibrationMatrices(sensor_msgs::CameraInfo& info, const cv::Mat& D,
                                const cv::Mat& K);
 
@@ -370,15 +353,12 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
   ros::ServiceServer set_sleeping_srv_;
   std::vector<ros::ServiceServer> set_user_output_srvs_;
 
-  ros::Timer image_timer_;
-
   std::unique_ptr<image_transport::ImageTransport> it_;
   image_transport::CameraPublisher img_raw_pub_;
 
-  ros::Publisher img_rect_pub_;
   image_geometry::PinholeCameraModel pinhole_model_;
 
-  GrabImagesAS* grab_imgs_raw_as_;
+  //  GrabImagesAS* grab_imgs_raw_as_;
 
   // Don't like using this global member
   sensor_msgs::Image img_raw_msg_;
@@ -389,7 +369,8 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
   std::array<float, 256> brightness_exp_lut_;
 
   bool is_sleeping_;
-  boost::recursive_mutex grab_mutex_;
+
+  boost::recursive_mutex device_mutex_;
 
   /// diagnostics:
   diagnostic_updater::Updater diagnostics_updater_;
@@ -398,6 +379,71 @@ class ArenaCameraNodelet : public nodelet::Nodelet {
   void create_diagnostics(diagnostic_updater::DiagnosticStatusWrapper& stat);
   void create_camera_info_diagnostics(
       diagnostic_updater::DiagnosticStatusWrapper& stat);
+};
+
+class ArenaCameraStreamingNodelet : public ArenaCameraNodeletBase {
+ public:
+  ArenaCameraStreamingNodelet();
+  virtual ~ArenaCameraStreamingNodelet();
+
+  /**
+   * initialize the camera and the ros node.
+   * calls ros::shutdown if an error occurs.
+   */
+  virtual void onInit();
+
+  /**
+   * Take one image
+   */
+  void timerCallback(const ros::TimerEvent&);
+
+ protected:
+  ros::Timer image_timer_;
+
+  typedef std::function<void(Arena::IImage* pImage)> ImageCallback_t;
+
+  class ImageCallback : public Arena::IImageCallback {
+   public:
+    ImageCallback(ImageCallback_t cb) : image_callback_(cb) {}
+
+    ~ImageCallback() {}
+
+    void OnImage(Arena::IImage* pImage) { image_callback_(pImage); }
+
+   private:
+    ImageCallback_t image_callback_;
+  } image_callback_obj_;
+
+  void imageCallback(Arena::IImage* pImage);
+};
+
+class ArenaCameraPolledNodelet : public ArenaCameraNodeletBase {
+ public:
+  ArenaCameraPolledNodelet();
+  virtual ~ArenaCameraPolledNodelet();
+
+  /**
+   * initialize the camera and the ros node.
+   * calls ros::shutdown if an error occurs.
+   */
+  virtual void onInit();
+
+  /**
+   * Callback for the grab images action
+   * @param goal the goal
+   */
+  void grabImagesRawActionExecuteCB(
+      const camera_control_msgs::GrabImagesGoal::ConstPtr& goal);
+
+  /**
+   * This function can also be called from the derived ArenaCameraOpenCV-Class
+   */
+  camera_control_msgs::GrabImagesResult grabImagesRaw(
+      const camera_control_msgs::GrabImagesGoal::ConstPtr& goal,
+      GrabImagesAS* action_server);
+
+ protected:
+  GrabImagesAS* grab_imgs_raw_as_;
 };
 
 }  // namespace arena_camera

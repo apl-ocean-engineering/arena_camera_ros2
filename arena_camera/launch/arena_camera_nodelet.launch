@@ -11,6 +11,8 @@
     <arg name="camera_user_id" default="" />
     <arg name="serial_number" default="" />
 
+    <arg name="run_web_server" default="false" />
+    <arg name="web_server_port" default="8080" />
 
     <arg unless="$(arg debug)" name="launch_prefix" value="" />
     <arg     if="$(arg debug)" name="launch_prefix" value="gdb -ex run --args" />
@@ -27,11 +29,16 @@
 
     <!-- The main camera driver -->
     <node name="arena_camera" pkg="nodelet" type="nodelet" output="screen"
-            args="load arena_camera/ArenaCameraNodelet $(arg manager)" >
+            args="load arena_camera/ArenaCameraStreamingNodelet $(arg manager)" >
         <rosparam command="load" file="$(arg config_file)" />
 
         <param name="device_user_id" value='$(arg camera_user_id)'/>
         <param name="serial_number" value="$(arg serial_number)" />
+    </node>
+
+    <node name="web_video_server" pkg="web_video_server" type="web_video_server"
+            output="screen" if="$(arg run_web_server)" >
+        <param name="port" value="$(arg web_server_port)"/>
     </node>
 
     <!-- Disable some of the image_transport endpoints-->

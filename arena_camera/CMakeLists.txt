@@ -152,7 +152,9 @@ set(arena_camera_lib_name ${PROJECT_NAME})
 add_library( ${arena_camera_lib_name}
     src/encoding_conversions.cpp
     src/arena_camera_parameter.cpp
-    src/arena_camera_nodelet.cpp
+    src/nodelet_base.cpp
+    src/polled_nodelet.cpp
+    src/streaming_nodelet.cpp
 )
 
 target_include_directories( ${arena_camera_lib_name}

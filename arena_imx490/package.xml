@@ -56,8 +56,6 @@
   <exec_depend>roslint</exec_depend>
   <exec_depend>nodelet</exec_depend>
   <exec_depend>arena_camera</exec_depend>
-
-
   <exec_depend>web_video_server</exec_depend>
 
 
