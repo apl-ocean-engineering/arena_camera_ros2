@@ -37,7 +37,7 @@ using sensor_msgs::CameraInfo;
 using sensor_msgs::CameraInfoPtr;
 
 ArenaCameraPolledNodelet::ArenaCameraPolledNodelet()
-    : ArenaCameraNodeletBase(), grab_imgs_raw_as_(nullptr) {}
+    : ArenaCameraNodeletBase(), grab_imgs_raw_as_() {}
 
 ArenaCameraPolledNodelet::~ArenaCameraPolledNodelet() {}
 
@@ -49,11 +49,11 @@ void ArenaCameraPolledNodelet::onInit() {
 
   ros::NodeHandle nh = getNodeHandle();
 
-  grab_imgs_raw_as_ = new GrabImagesAS(
+  grab_imgs_raw_as_.reset(new GrabImagesAS(
       nh, "grab_images_raw",
       boost::bind(&ArenaCameraPolledNodelet::grabImagesRawActionExecuteCB, this,
                   _1),
-      false);
+      false));
 
   grab_imgs_raw_as_->start();
 }
@@ -61,7 +61,7 @@ void ArenaCameraPolledNodelet::onInit() {
 void ArenaCameraPolledNodelet::grabImagesRawActionExecuteCB(
     const camera_control_msgs::GrabImagesGoal::ConstPtr &goal) {
   camera_control_msgs::GrabImagesResult result;
-  result = grabImagesRaw(goal, grab_imgs_raw_as_);
+  result = grabImagesRaw(goal, grab_imgs_raw_as_.get());
   grab_imgs_raw_as_->setSucceeded(result);
 }
 

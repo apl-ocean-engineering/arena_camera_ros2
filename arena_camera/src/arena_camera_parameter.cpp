@@ -76,11 +76,18 @@ ArenaCameraParameter::~ArenaCameraParameter() {}
 
 void ArenaCameraParameter::readFromRosParameterServer(
     const ros::NodeHandle& nh) {
-  nh.param<std::string>("camera_frame", camera_frame_, "arena_camera");
+  if (!nh.getParam("camera_frame", camera_frame_)) {
+    ROS_ERROR("\"camera_frame\" not set");
+  }
+  ROS_INFO_STREAM("Using camera_frame \"" << camera_frame_ << "\"");
 
-  nh.param<std::string>("device_user_id", device_user_id_, "");
+  if (nh.getParam("device_user_id", device_user_id_)) {
+    ROS_INFO_STREAM("Using DeviceUserId: \"" << device_user_id_ << "\"");
+  }
 
-  nh.param<std::string>("serial_number", serial_number_, "");
+  if (nh.getParam("serial_number", serial_number_)) {
+    ROS_INFO_STREAM("Using serial_number: \"" << serial_number_ << "\"");
+  }
 
   if (nh.hasParam("frame_rate")) {
     nh.getParam("frame_rate", frame_rate_);
@@ -185,33 +192,21 @@ void ArenaCameraParameter::readFromRosParameterServer(
     ROS_DEBUG_STREAM("brightness is continuous");
   }
 
+  // clang-format off
+  // exposure_given | exposure_auto_given_ | exposure_auto_ | action           |
+  //                |                      | received val   |                  |
+  // ---------------|----------------------|----------------|------------------|
+  // 1     F                 F                       F      | default value issue
+  // 2     F                 F                       T      | default case notting to do
+  // 3     F                 T                       F      | shoe msg ; and set exposure_auto true in nodemap
+  // 4     F                 T                       T      | print param msg
+  // 5     T                 F                       F      | default value issue
+  // 6     T                 F                       T      | set default exposure_auto to false silently
+  // 7     T                 T                       F      | show param msg
+  // 8     T                 T                       T      | show ignore msg; show param msg ;set to false
+  // clang-format on
+  //
   // ignore exposure_auto ?
-  /*
-    exposure_given | exposure_auto_given_ | exposure_auto_ | action           |
-                   |                      | received val   |                  |
-    ---------------|----------------------|----------------|------------------|
-    1     F                 F                       F      | default value issue
-    |
-
-    2     F                 F                       T      | default case
-    notting to do |
-
-    3     F                 T                       F      | shoe msg ; and set
-    exposure_auto true in nodemap |
-
-    4     F                 T                       T      | print param msg
-
-    5     T                 F                       F      | default value issue
-    |
-
-    6     T                 F                       T      | set default
-    exposure_auto to false silently  |
-
-    7     T                 T                       F      | show param msg
-
-    8     T                 T                       T      | show ignore msg;
-    show param msg ;set to false |
-  */
   auto exposure_auto_given = nh.hasParam("exposure_auto");
   nh.getParam("exposure_auto", exposure_auto_);
 
@@ -254,34 +249,22 @@ void ArenaCameraParameter::readFromRosParameterServer(
     ROS_WARN_STREAM("exposure_auto is ignored because exposure is given.");
   }
 
-  // ignore gain_auto
-  /*
-    gain_given     |   gain_auto_given_   | gain_auto_     | action           |
-                   |                      | received val   |                  |
-    ---------------|----------------------|----------------|------------------|
-    1     F                 F                       F      | default value issue
-    |
-
-    2     F                 F                       T      | default case
-    notting to do |
-
-    3     F                 T                       F      | shoe msg ; and set
-    gain_auto true in nodemap |
-
-    4     F                 T                       T      | print param msg
-
-    5     T                 F                       F      | default value issue
-    |
-
-    6     T                 F                       T      | set default
-    gain_auto to false silently  |
-
-    7     T                 T                       F      | show param msg
-
-    8     T                 T                       T      | show ignore msg;
-    show param msg ;set to false |
-  */
-
+  // clang-format off
+  //
+  // gain_given     |   gain_auto_given_   | gain_auto_     | action           |
+  //                |                      | received val   |                  |
+  // ---------------|----------------------|----------------|------------------|
+  // 1     F                 F                       F      | default value issue
+  // 2     F                 F                       T      | default case notting to do
+  // 3     F                 T                       F      | shoe msg ; and set gain_auto true in nodemap
+  // 4     F                 T                       T      | print param msg
+  // 5     T                 F                       F      | default value issue
+  // 6     T                 F                       T      | set default gain_auto to false silently
+  // 7     T                 T                       F      | show param msg
+  // 8     T                 T                       T      | show ignore msg; show param msg ;set to false
+  //
+  // clang-format on
+  // ignore gain_auto?
   auto gain_auto_given = nh.hasParam("gain_auto");
   nh.getParam("gain_auto", gain_auto_);
 

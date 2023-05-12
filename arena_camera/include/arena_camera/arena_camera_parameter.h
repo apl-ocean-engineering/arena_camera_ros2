@@ -27,8 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef ARENA_CAMERA_ARENA_CAMERA_PARAMETER_H
-#define ARENA_CAMERA_ARENA_CAMERA_PARAMETER_H
+#pragma once
 
 #include <ros/ros.h>
 
@@ -56,9 +55,9 @@ class ArenaCameraParameter {
    * Read the parameters from the parameter server.
    * If invalid parameters can be detected, the interface will reset them
    * to the default values.
-   * @param nh the ros::NodeHandle to use
+   * @param pnh the **private** ros::NodeHandle to use
    */
-  void readFromRosParameterServer(const ros::NodeHandle& nh);
+  void readFromRosParameterServer(const ros::NodeHandle& pnh);
 
   /**
    * Getter for the device_user_id_ set from ros-parameter server
@@ -337,5 +336,3 @@ class ArenaCameraParameter {
 };
 
 }  // namespace arena_camera
-
-#endif  // ARENA_CAMERA_ARENA_CAMERA_PARAMETER_H

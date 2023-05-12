@@ -1,5 +1,8 @@
 /******************************************************************************
- * Software License Agreement (BSD License)
+ * Software License Agreement (BSD 3-Clause License)
+ * Copyright (C) 2023 University of Washington. All rights reserved.
+ *
+ * Based on the original arena_camera_ros as follows:
  *
  * Copyright (C) 2016, Magazino GmbH. All rights reserved.
  *
@@ -27,8 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef ARENA_CAMERA_ARENA_CAMERA_NODE_H
-#define ARENA_CAMERA_ARENA_CAMERA_NODE_H
+#pragma once
 
 // STD
 #include <memory>
@@ -67,9 +69,7 @@ namespace arena_camera {
 typedef actionlib::SimpleActionServer<camera_control_msgs::GrabImagesAction>
     GrabImagesAS;
 
-/**
- * The ROS-node of the arena_camera interface
- */
+/// Base class for both types of nodelets
 class ArenaCameraNodeletBase : public nodelet::Nodelet {
  public:
   ArenaCameraNodeletBase();
@@ -96,7 +96,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
 
  protected:
   /**
-   * Creates the camera instance
+   * Creates the camera instance either by UserDeviceId, SerialNumber,
+   * or taking the first auto-detected camera.
    * @return false if an error occurred
    */
   bool registerCameraByUserId(const std::string& device_id);
@@ -443,9 +444,7 @@ class ArenaCameraPolledNodelet : public ArenaCameraNodeletBase {
       GrabImagesAS* action_server);
 
  protected:
-  GrabImagesAS* grab_imgs_raw_as_;
+  std::unique_ptr<GrabImagesAS> grab_imgs_raw_as_;
 };
 
 }  // namespace arena_camera
-
-#endif  // ARENA_CAMERA_ARENA_CAMERA_NODE_H

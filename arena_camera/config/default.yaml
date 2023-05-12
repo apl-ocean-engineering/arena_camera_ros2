@@ -5,8 +5,14 @@
 camera_frame: arena_camera
 
 #  The DeviceUserID of the camera. If empty, the first camera found in the
-#  device list will be used
-device_user_id: ""
+#  device list will be used.  If specified, device_user_id takes precedence
+#  over serial_number.   If neither is specified, the system users the
+#  first auto-detected camera.
+#device_user_id: ""
+
+#  Serial number of camera to look for.
+#
+#serial_number: ""
 
 #  The CameraInfo URL (Uniform Resource Locator) where the optional intrinsic
 #  camera calibration parameters are stored. This URL string will be parsed

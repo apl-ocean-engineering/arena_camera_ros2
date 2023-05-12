@@ -72,107 +72,86 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ARENA_CAMERA_NODE
 #
 
-set( arena_imx490_lib_name ${PROJECT_NAME})
+# set( arena_imx490_lib_name ${PROJECT_NAME})
 
-add_library( ${arena_imx490_lib_name}
-    src/arena_imx490_nodelet.cpp
-    src/arena_imx490.cpp
-)
+# add_library( ${arena_imx490_lib_name}
+#     src/arena_imx490_nodelet.cpp
+#     src/arena_imx490.cpp
+# )
 
-target_include_directories( ${arena_imx490_lib_name}
-    PRIVATE ${catkin_INCLUDE_DIRS}
-    PRIVATE ${arena_sdk_INCLUDE_DIRS}
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+# target_include_directories( ${arena_imx490_lib_name}
+#     PRIVATE ${catkin_INCLUDE_DIRS}
+#     PRIVATE ${arena_sdk_INCLUDE_DIRS}
+#     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+# )
 
-target_link_libraries( ${arena_imx490_lib_name}
-    ${catkin_LIBRARIES}
-    ${arena_sdk_LIBRARIES}
-)
-
-
-add_dependencies( ${arena_imx490_lib_name}
-    ${catkin_EXPORTED_TARGETS}
-)
+# target_link_libraries( ${arena_imx490_lib_name}
+#     ${catkin_LIBRARIES}
+#     ${arena_sdk_LIBRARIES}
+# )
 
 
-#
-#
-#
+# add_dependencies( ${arena_imx490_lib_name}
+#     ${catkin_EXPORTED_TARGETS}
+# )
 
-set(arena_camera_node_name arena_imx490_node)
-
-# Since this is a thin wrapper around nodelet:::oader, it
-# doesn't depend on any of the package libs
-add_executable( ${arena_camera_node_name}
-    src/node_main.cpp
-)
-
-target_include_directories( ${arena_camera_node_name}
-    PRIVATE ${catkin_INCLUDE_DIRS}
-)
-
-target_link_libraries( ${arena_camera_node_name}
-    ${catkin_LIBRARIES}
-)
 
 #
-# WRITE_DEVICE_USER_ID_TO_CAMERA
+#
 #
 
-set(write_device_user_id_to_camera write_device_user_id_to_camera)
+# set(arena_camera_node_name arena_imx490_node)
 
-add_executable(
-    ${write_device_user_id_to_camera} # run by rosrun
-        src/write_device_user_id_to_camera.cpp
-)
+# # Since this is a thin wrapper around nodelet:::oader, it
+# # doesn't depend on any of the package libs
+# add_executable( ${arena_camera_node_name}
+#     src/node_main.cpp
+# )
 
-target_include_directories(
-    ${write_device_user_id_to_camera}
-        PRIVATE ${arena_sdk_INCLUDE_DIRS}
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+# target_include_directories( ${arena_camera_node_name}
+#     PRIVATE ${catkin_INCLUDE_DIRS}
+# )
 
-target_link_libraries(
-    ${write_device_user_id_to_camera}
-        ${arena_sdk_LIBRARIES}
-)
+# target_link_libraries( ${arena_camera_node_name}
+#     ${catkin_LIBRARIES}
+# )
+
 
 #
 # Sample IMX490 executables from LucidVision
 # https://support.thinklucid.com/knowledgebase/tonemapping-images-tri054s-imx490/
 #
 
-add_executable( Cpp_Triton_OfflineProcessing
-    tools/Cpp_Triton_OfflineProcessing.cpp
-)
+# add_executable( Cpp_Triton_OfflineProcessing
+#     tools/Cpp_Triton_OfflineProcessing.cpp
+# )
 
-target_include_directories( Cpp_Triton_OfflineProcessing
-    PRIVATE ${arena_sdk_INCLUDE_DIRS}
-    PRIVATE ${arena_sdk_INCLUDE_DIRS}/../Save/
-    PRIVATE ${OpenCV_INCLUDE_DIRS}
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools/
-)
+# target_include_directories( Cpp_Triton_OfflineProcessing
+#     PRIVATE ${arena_sdk_INCLUDE_DIRS}
+#     PRIVATE ${arena_sdk_INCLUDE_DIRS}/../Save/
+#     PRIVATE ${OpenCV_INCLUDE_DIRS}
+#     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools/
+# )
 
-target_link_libraries( Cpp_Triton_OfflineProcessing
-    ${arena_sdk_LIBRARIES}
-    ${OpenCV_LIBS}
-)
+# target_link_libraries( Cpp_Triton_OfflineProcessing
+#     ${arena_sdk_LIBRARIES}
+#     ${OpenCV_LIBS}
+# )
 
-add_executable( Cpp_Triton_Recorder
-    tools/Cpp_Triton_OfflineProcessing.cpp
-)
+# add_executable( Cpp_Triton_Recorder
+#     tools/Cpp_Triton_OfflineProcessing.cpp
+# )
 
-target_include_directories( Cpp_Triton_Recorder
-    PRIVATE ${arena_sdk_INCLUDE_DIRS}
-    PRIVATE ${arena_sdk_INCLUDE_DIRS}/../Save/
-    PRIVATE ${OpenCV_INCLUDE_DIRS}
-)
+# target_include_directories( Cpp_Triton_Recorder
+#     PRIVATE ${arena_sdk_INCLUDE_DIRS}
+#     PRIVATE ${arena_sdk_INCLUDE_DIRS}/../Save/
+#     PRIVATE ${OpenCV_INCLUDE_DIRS}
+# )
 
-target_link_libraries( Cpp_Triton_Recorder
-    ${arena_sdk_LIBRARIES}
-    ${OpenCV_LIBS}
-)
+# target_link_libraries( Cpp_Triton_Recorder
+#     ${arena_sdk_LIBRARIES}
+#     ${OpenCV_LIBS}
+# )
 
 
 # -----------------------------------------------------------------------------
@@ -201,15 +180,15 @@ install(
 #      ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
 
-install(
-    TARGETS
-        ${arena_camera_node_name}
-        ${write_device_user_id_to_camera}
-        Cpp_Triton_Recorder
-        Cpp_Triton_OfflineProcessing
-    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+# install(
+#     TARGETS
+#         # ${arena_camera_node_name}
+#         # ${write_device_user_id_to_camera}
+#         # Cpp_Triton_Recorder
+#         # Cpp_Triton_OfflineProcessing
+#     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+#     RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 install(
     DIRECTORY include/${PROJECT_NAME}/
