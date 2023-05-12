@@ -79,14 +79,14 @@ void ArenaCameraParameter::readFromRosParameterServer(
   if (!nh.getParam("camera_frame", camera_frame_)) {
     ROS_ERROR("\"camera_frame\" not set");
   }
-  ROS_INFO_STREAM("Using camera_frame \"" << camera_frame_ << "\"");
+  ROS_INFO_STREAM("Using camera_frame: " << camera_frame_);
 
   if (nh.getParam("device_user_id", device_user_id_)) {
-    ROS_INFO_STREAM("Using DeviceUserId: \"" << device_user_id_ << "\"");
+    ROS_INFO_STREAM("Using DeviceUserId: " << device_user_id_);
   }
 
   if (nh.getParam("serial_number", serial_number_)) {
-    ROS_INFO_STREAM("Using serial_number: \"" << serial_number_ << "\"");
+    ROS_INFO_STREAM("Using serial_number: " << serial_number_);
   }
 
   if (nh.hasParam("frame_rate")) {
@@ -420,24 +420,10 @@ std::string ArenaCameraParameter::shutterModeString() const {
   }
 }
 
-const std::string& ArenaCameraParameter::imageEncoding() const {
-  return image_encoding_;
-}
-
-const std::string& ArenaCameraParameter::cameraFrame() const {
-  return camera_frame_;
-}
-
-const double& ArenaCameraParameter::frameRate() const { return frame_rate_; }
-
 void ArenaCameraParameter::setFrameRate(const ros::NodeHandle& nh,
                                         const double& frame_rate) {
   frame_rate_ = frame_rate;
   nh.setParam("frame_rate", frame_rate_);
-}
-
-const std::string& ArenaCameraParameter::cameraInfoURL() const {
-  return camera_info_url_;
 }
 
 void ArenaCameraParameter::setCameraInfoURL(

@@ -80,20 +80,14 @@ class ArenaCameraParameter {
    */
   std::string shutterModeString() const;
 
-  /**
-   * Getter for the camera_frame_ set from ros-parameter server
-   */
-  const std::string& cameraFrame() const;
+  // Getter for the camera_frame_ set from ros-parameter server
+  const std::string& cameraFrame() const { return camera_frame_; }
 
-  /**
-   * Getter for the frame_rate_ read from ros-parameter server
-   */
-  const double& frameRate() const;
+  // Getter for the frame_rate_ read from ros-parameter server
+  const double& frameRate() const { return frame_rate_; }
 
-  /**
-   * Getter for the image_encoding_ read from ros-parameter server
-   */
-  const std::string& imageEncoding() const;
+  // Getter for the image_encoding_ read from ros-parameter server
+  const std::string& imageEncoding() const { return image_encoding_; }
 
   /**
    * Setter for the frame_rate_ initially set from ros-parameter server
@@ -101,10 +95,8 @@ class ArenaCameraParameter {
    */
   void setFrameRate(const ros::NodeHandle& nh, const double& frame_rate);
 
-  /**
-   * Getter for the camera_info_url set from ros-parameter server
-   */
-  const std::string& cameraInfoURL() const;
+  // Getter for the camera_info_url set from ros-parameter server
+  const std::string& cameraInfoURL() const { return camera_info_url_; }
 
   /**
    * Setter for the camera_info_url_ if a new CameraInfo-Msgs Object is

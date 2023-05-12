@@ -101,7 +101,6 @@ void ArenaCameraNodeletBase::onInit() {
   set_sleeping_srv_ = nh.advertiseService(
       "set_sleeping", &ArenaCameraNodeletBase::setSleepingCallback, this);
 
-  // it_ = std::make_unique<image_transport::ImageTransport>(nh);
   it_.reset(new image_transport::ImageTransport(nh));
   img_raw_pub_ = it_->advertiseCamera("image_raw", 1);
 
@@ -117,11 +116,7 @@ void ArenaCameraNodeletBase::onInit() {
       ros::Duration(2), &ArenaCameraNodeletBase::diagnostics_timer_callback_,
       this);
 
-  // reading all necessary parameter to open the desired camera from the
-  // ros-parameter-server. In case that invalid parameter values can be
-  // detected, the interface will reset them to the default values.
-  // These parameters furthermore contain the intrinsic calibration matrices,
-  // in case they are provided
+  // Read all parameters from parameter server
   arena_camera_parameter_set_.readFromRosParameterServer(pnh);
 
   // setting the camera info URL to produce rectified image. Can substitute
@@ -130,24 +125,31 @@ void ArenaCameraNodeletBase::onInit() {
   //  arena_camera_parameter_set_.setCameraInfoURL(nh,
   //  "file://${ROS_HOME}/camera_info/camera.yaml");
 
-  // creating the target ArenaCamera-Object with the specified
-  // device_user_id, registering the Software-Trigger-Mode, starting the
-  // communication with the device and enabling the desired startup-settings
+  // Open the Arena SDK
+  pSystem_ = Arena::OpenSystem();
+  pSystem_->UpdateDevices(100);
+  if (pSystem_->GetDevices().size() == 0) {
+    NODELET_FATAL("Did not detect any cameras!!");
+    return;
+  }
 
   if (!arena_camera_parameter_set_.deviceUserID().empty()) {
     if (!registerCameraByUserId(arena_camera_parameter_set_.deviceUserID())) {
-      NODELET_FATAL_STREAM("Unable to register a camera");
+      NODELET_FATAL_STREAM("Unable to find a camera with DeviceUserId \""
+                           << arena_camera_parameter_set_.deviceUserID()
+                           << "\"");
       return;
     }
   } else if (!arena_camera_parameter_set_.serialNumber().empty()) {
     if (!registerCameraBySerialNumber(
             arena_camera_parameter_set_.serialNumber())) {
-      NODELET_FATAL_STREAM("Unable to register a camera");
+      NODELET_FATAL_STREAM("Unable to find a camera with Serial Number "
+                           << arena_camera_parameter_set_.serialNumber());
       return;
     }
   } else {
     if (!registerCameraByAuto()) {
-      NODELET_FATAL_STREAM("Unable to register a camera");
+      NODELET_FATAL_STREAM("Unable to find any cameras to register");
       return;
     }
   }
@@ -161,63 +163,45 @@ void ArenaCameraNodeletBase::onInit() {
 
 bool ArenaCameraNodeletBase::registerCameraByUserId(
     const std::string &device_user_id_to_open) {
-  pSystem_ = Arena::OpenSystem();
-  pSystem_->UpdateDevices(100);
+  ROS_ASSERT(pSystem_);
   std::vector<Arena::DeviceInfo> deviceInfos = pSystem_->GetDevices();
-
-  if (deviceInfos.size() == 0) {
-    Arena::CloseSystem(pSystem_);
-    pSystem_ = nullptr;
-    return false;
-  }
+  ROS_ASSERT(deviceInfos.size() > 0);
 
   NODELET_INFO_STREAM("Connecting to camera with DeviceUserId"
                       << device_user_id_to_open);
 
   std::vector<Arena::DeviceInfo>::iterator it;
 
-  for (it = deviceInfos.begin(); it != deviceInfos.end(); ++it) {
-    std::string device_user_id_found(it->UserDefinedName());
-    if ((0 == device_user_id_to_open.compare(device_user_id_found)) ||
-        (device_user_id_to_open.length() < device_user_id_found.length() &&
-         (0 ==
-          device_user_id_found.compare(
-              device_user_id_found.length() - device_user_id_to_open.length(),
-              device_user_id_to_open.length(), device_user_id_to_open)))) {
+  for (auto &dev : deviceInfos) {
+    const std::string device_user_id(dev.UserDefinedName());
+    // Must be an exact match
+    if (0 == device_user_id_to_open.compare(device_user_id)) {
       NODELET_INFO_STREAM("Found the desired camera with DeviceUserID "
                           << device_user_id_to_open << ": ");
 
-      pDevice_ = pSystem_->CreateDevice(*it);
+      pDevice_ = pSystem_->CreateDevice(dev);
       return true;
-      break;
     }
   }
 
   NODELET_ERROR_STREAM(
       "Couldn't find the camera that matches the "
-      << "given DeviceUserID: " << device_user_id_to_open << "! "
+      << "given DeviceUserID: \"" << device_user_id_to_open << "\"! "
       << "Either the ID is wrong or the cam is not yet connected");
   return false;
 }
 
 bool ArenaCameraNodeletBase::registerCameraBySerialNumber(
     const std::string &serial_number) {
-  pSystem_ = Arena::OpenSystem();
-  pSystem_->UpdateDevices(100);
+  ROS_ASSERT(pSystem_);
   std::vector<Arena::DeviceInfo> deviceInfos = pSystem_->GetDevices();
-
-  if (deviceInfos.size() == 0) {
-    Arena::CloseSystem(pSystem_);
-    pSystem_ = nullptr;
-    return false;
-  }
+  ROS_ASSERT(deviceInfos.size() > 0);
 
   NODELET_INFO_STREAM("Connecting to camera with Serial Number "
                       << serial_number);
 
   for (auto &dev : deviceInfos) {
-    const auto device_sn = dev.SerialNumber();
-    if (0 == serial_number.compare(device_sn)) {
+    if (0 == serial_number.compare(dev.SerialNumber())) {
       NODELET_INFO_STREAM("Found the desired camera with Serial Number "
                           << serial_number << ": ");
 
@@ -234,15 +218,9 @@ bool ArenaCameraNodeletBase::registerCameraBySerialNumber(
 }
 
 bool ArenaCameraNodeletBase::registerCameraByAuto() {
-  pSystem_ = Arena::OpenSystem();
-  pSystem_->UpdateDevices(100);
+  ROS_ASSERT(pSystem_);
   std::vector<Arena::DeviceInfo> deviceInfos = pSystem_->GetDevices();
-
-  if (deviceInfos.size() == 0) {
-    Arena::CloseSystem(pSystem_);
-    pSystem_ = nullptr;
-    return false;
-  }
+  ROS_ASSERT(deviceInfos.size() > 0);
 
   int i = 0;
   NODELET_INFO_STREAM("Found " << deviceInfos.size() << " cameras");
