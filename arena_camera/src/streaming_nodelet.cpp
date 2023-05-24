@@ -52,8 +52,15 @@ void ArenaCameraStreamingNodelet::onInit() {
   // Call parent initiallzer
   ArenaCameraNodeletBase::onInit();
 
-  ros::NodeHandle nh = getNodeHandle();
+  try {
+    pDevice_->StartStream();
+  } catch (GenICam::GenericException &e) {
+    NODELET_ERROR_STREAM("Error while configuring camera: \r\n"
+                         << e.GetDescription());
+    return;
+  }
 
+  ros::NodeHandle nh = getNodeHandle();
   pDevice_->RegisterImageCallback(&image_callback_obj_);
 
   image_timer_ =
@@ -70,26 +77,14 @@ void ArenaCameraStreamingNodelet::timerCallback(const ros::TimerEvent &) {
   }
 
   if (pDevice_->IsConnected() == false) {
-    NODELET_ERROR("Arena camera has been removed, giving up!");
+    NODELET_ERROR("Arena camera has disconnected, giving up!");
     image_timer_.stop();
     return;
-
-    // NODELET_ERROR("Arena camera has been removed, trying to reset");
-    //  pSystem_->DestroyDevice(pDevice_);
-    //  pDevice_ = nullptr;
-    //  Arena::CloseSystem(pSystem_);
-    //  pSystem_ = nullptr;
-    //  for (ros::ServiceServer& user_output_srv : set_user_output_srvs_) {
-    //    user_output_srv.shutdown();
-    //  }
-    //  ros::Duration(0.5).sleep();  // sleep for half a second
-    //  init();
-    //  return;
   }
 
   if (!isSleeping() && (img_raw_pub_.getNumSubscribers())) {
     NODELET_DEBUG("Triggering image...");
-    triggerImage();
+    sendSoftwareTrigger();
   }
 }
 

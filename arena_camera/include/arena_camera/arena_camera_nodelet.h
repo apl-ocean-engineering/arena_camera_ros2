@@ -108,16 +108,16 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * Start the camera and initialize the messages
    * @return
    */
-  bool startGrabbing();
+  bool configureCamera();
 
   bool setImageEncoding(const std::string& ros_encoding);
 
   /**
    * Returns the total number of subscribers on any advertised image topic.
    */
-  uint32_t getNumSubscribers() const;
+  // uint32_t getNumSubscribers() const;
 
-  virtual bool triggerImage();
+  virtual bool sendSoftwareTrigger();
 
   /**
    * Grabs an image and stores the image in img_raw_msg_

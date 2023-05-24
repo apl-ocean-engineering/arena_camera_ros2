@@ -124,6 +124,8 @@ int main() {
   // flag to track when an exception has been thrown
   bool exceptionThrown = false;
 
+  bool dumpXml = true;
+
   std::cout << "Cpp_Explore_Nodes\n";
 
   try {
@@ -143,6 +145,10 @@ int main() {
     std::cout << "Commence example\n\n";
     ExploreNode(pRoot);
     std::cout << "\nExample complete\n";
+
+    if (dumpXml) {
+      pDevice->DownloadXml();
+    }
 
     // clean up example
     pSystem->DestroyDevice(pDevice);

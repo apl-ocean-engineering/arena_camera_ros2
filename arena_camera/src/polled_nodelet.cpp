@@ -47,10 +47,16 @@ ArenaCameraPolledNodelet::~ArenaCameraPolledNodelet() {}
 void ArenaCameraPolledNodelet::onInit() {
   ArenaCameraNodeletBase::onInit();
 
-  ros::NodeHandle nh = getNodeHandle();
+  try {
+    pDevice_->StartStream();
+  } catch (GenICam::GenericException &e) {
+    NODELET_ERROR_STREAM("Error while configuring camera: \r\n"
+                         << e.GetDescription());
+    return;
+  }
 
   grab_imgs_raw_as_.reset(new GrabImagesAS(
-      nh, "grab_images_raw",
+      getNodeHandle(), "grab_images_raw",
       boost::bind(&ArenaCameraPolledNodelet::grabImagesRawActionExecuteCB, this,
                   _1),
       false));

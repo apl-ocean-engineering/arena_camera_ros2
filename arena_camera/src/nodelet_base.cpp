@@ -155,7 +155,7 @@ void ArenaCameraNodeletBase::onInit() {
   }
 
   // starting the grabbing procedure with the desired image-settings
-  if (!startGrabbing()) {
+  if (!configureCamera()) {
     NODELET_FATAL_STREAM("Unable to configure camera");
     return;
   }
@@ -203,7 +203,7 @@ bool ArenaCameraNodeletBase::registerCameraBySerialNumber(
   for (auto &dev : deviceInfos) {
     if (0 == serial_number.compare(dev.SerialNumber())) {
       NODELET_INFO_STREAM("Found the desired camera with Serial Number "
-                          << serial_number << ": ");
+                          << serial_number);
 
       pDevice_ = pSystem_->CreateDevice(dev);
       return true;
@@ -236,137 +236,7 @@ bool ArenaCameraNodeletBase::registerCameraByAuto() {
   return true;
 }
 
-sensor_msgs::RegionOfInterest ArenaCameraNodeletBase::currentROI() {
-  sensor_msgs::RegionOfInterest roi;
-  // \todo{amarburg}  Broke this by getting ride of pImage_
-  //                  Need to save as state?
-  // roi.width = pImage_->GetWidth();
-  // roi.height = pImage_->GetHeight();
-  // ;
-  // roi.x_offset = pImage_->GetOffsetX();
-  // roi.y_offset = pImage_->GetOffsetY();
-  return roi;
-}
-
-float ArenaCameraNodeletBase::currentGamma() {
-  GenApi::CFloatPtr pGamma = pDevice_->GetNodeMap()->GetNode("Gamma");
-
-  if (!pGamma || !GenApi::IsReadable(pGamma)) {
-    NODELET_WARN_STREAM("No gamma value, returning -1");
-    return -1.;
-  } else {
-    float gammaValue = pGamma->GetValue();
-    return gammaValue;
-  }
-}
-
-int64_t ArenaCameraNodeletBase::currentBinningX() {
-  GenApi::CIntegerPtr BinningHorizontal =
-      pDevice_->GetNodeMap()->GetNode("BinningHorizontal");
-
-  if (!BinningHorizontal || !GenApi::IsReadable(BinningHorizontal)) {
-    NODELET_WARN_STREAM("No binningY value, returning -1");
-    return -1;
-  } else {
-    float binningXValue = BinningHorizontal->GetValue();
-    return binningXValue;
-  }
-}
-
-int64_t ArenaCameraNodeletBase::currentBinningY() {
-  GenApi::CIntegerPtr BinningVertical =
-      pDevice_->GetNodeMap()->GetNode("BinningVertical");
-
-  if (!BinningVertical || !GenApi::IsReadable(BinningVertical)) {
-    NODELET_WARN_STREAM("No binningY value, returning -1");
-    return -1;
-  } else {
-    float binningYValue = BinningVertical->GetValue();
-    return binningYValue;
-  }
-}
-
-float ArenaCameraNodeletBase::currentGain() {
-  GenApi::CFloatPtr pGain = pDevice_->GetNodeMap()->GetNode("Gain");
-
-  if (!pGain || !GenApi::IsReadable(pGain)) {
-    NODELET_WARN_STREAM("No gain value");
-    return -1.;
-  } else {
-    float gainValue = pGain->GetValue();
-    return gainValue;
-  }
-}
-
-float ArenaCameraNodeletBase::currentExposure() {
-  GenApi::CFloatPtr pExposureTime =
-      pDevice_->GetNodeMap()->GetNode("ExposureTime");
-
-  if (!pExposureTime || !GenApi::IsReadable(pExposureTime)) {
-    NODELET_WARN_STREAM("No exposure time value, returning -1");
-    return -1.;
-  } else {
-    float exposureValue = pExposureTime->GetValue();
-    return exposureValue;
-  }
-}
-
-std::string ArenaCameraNodeletBase::currentROSEncoding() {
-  std::string gen_api_encoding(Arena::GetNodeValue<GenICam::gcstring>(
-      pDevice_->GetNodeMap(), "PixelFormat"));
-  std::string ros_encoding("");
-  if (!encoding_conversions::genAPI2Ros(gen_api_encoding, ros_encoding)) {
-    std::stringstream ss;
-    ss << "No ROS equivalent to GenApi encoding '" << gen_api_encoding
-       << "' found! This is bad because this case "
-          "should never occur!";
-    throw std::runtime_error(ss.str());
-    return "NO_ENCODING";
-  }
-  return ros_encoding;
-}
-
-bool ArenaCameraNodeletBase::setImageEncoding(const std::string &ros_encoding) {
-  std::string gen_api_encoding;
-  bool conversion_found =
-      encoding_conversions::ros2GenAPI(ros_encoding, gen_api_encoding);
-  if (!conversion_found) {
-    if (ros_encoding.empty()) {
-      return false;
-    } else {
-      std::string fallbackPixelFormat =
-          Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(),
-                                                 "PixelFormat")
-              .c_str();
-      NODELET_ERROR_STREAM(
-          "Can't convert ROS encoding '"
-          << ros_encoding
-          << "' to a corresponding GenAPI encoding! Will use current "
-          << "pixel format ( " << fallbackPixelFormat << " ) as fallback!");
-      return false;
-    }
-  }
-  try {
-    GenApi::CEnumerationPtr pPixelFormat =
-        pDevice_->GetNodeMap()->GetNode("PixelFormat");
-    if (GenApi::IsWritable(pPixelFormat)) {
-      Arena::SetNodeValue<GenICam::gcstring>(
-          pDevice_->GetNodeMap(), "PixelFormat", gen_api_encoding.c_str());
-      if (currentROSEncoding() == "16UC3" || currentROSEncoding() == "16UC4")
-        NODELET_WARN_STREAM(
-            "ROS grabbing image data from 3D pixel format, unable to display "
-            "in image viewer");
-    }
-  } catch (const GenICam::GenericException &e) {
-    NODELET_ERROR_STREAM("An exception while setting target image encoding to '"
-                         << ros_encoding
-                         << "' occurred: " << e.GetDescription());
-    return false;
-  }
-  return true;
-}
-
-bool ArenaCameraNodeletBase::startGrabbing() {
+bool ArenaCameraNodeletBase::configureCamera() {
   ros::NodeHandle nh = getNodeHandle();
   auto pNodeMap = pDevice_->GetNodeMap();
 
@@ -603,12 +473,7 @@ bool ArenaCameraNodeletBase::startGrabbing() {
                                            "StreamBufferHandlingMode",
                                            "NewestOnly");
 
-    //
-    // Trigger Image
-    //
-
-    pDevice_->StartStream();
-    bool isTriggerArmed = false;
+    // bool isTriggerArmed = false;
 
     // if (GenApi::IsWritable(pTriggerMode)) {
     //   do {
@@ -624,7 +489,7 @@ bool ArenaCameraNodeletBase::startGrabbing() {
     // memcpy(&img_raw_msg_.data[0], pImage_->GetData(),
     //        img_raw_msg_.height * img_raw_msg_.step);
   } catch (GenICam::GenericException &e) {
-    NODELET_ERROR_STREAM("Error while grabbing first image occurred: \r\n"
+    NODELET_ERROR_STREAM("Error while configuring camera: \r\n"
                          << e.GetDescription());
     return false;
   }
@@ -665,23 +530,137 @@ bool ArenaCameraNodeletBase::startGrabbing() {
   return true;
 }
 
-// struct CameraPublisherImpl {
-//   image_transport::Publisher image_pub_;
-//   ros::Publisher info_pub_;
-//   bool unadvertised_;
-//   // double constructed_;
-// };
+sensor_msgs::RegionOfInterest ArenaCameraNodeletBase::currentROI() {
+  sensor_msgs::RegionOfInterest roi;
+  // \todo{amarburg}  Broke this by getting ride of pImage_
+  //                  Need to save as state?
+  // roi.width = pImage_->GetWidth();
+  // roi.height = pImage_->GetHeight();
+  // ;
+  // roi.x_offset = pImage_->GetOffsetX();
+  // roi.y_offset = pImage_->GetOffsetY();
+  return roi;
+}
 
-// class CameraPublisherLocal {
-// public:
-//   struct Impl;
-//   typedef boost::shared_ptr<Impl> ImplPtr;
-//   typedef boost::weak_ptr<Impl> ImplWPtr;
+float ArenaCameraNodeletBase::currentGamma() {
+  GenApi::CFloatPtr pGamma = pDevice_->GetNodeMap()->GetNode("Gamma");
 
-//   CameraPublisherImpl *impl_;
-// };
+  if (!pGamma || !GenApi::IsReadable(pGamma)) {
+    NODELET_WARN_STREAM("No gamma value, returning -1");
+    return -1.;
+  } else {
+    float gammaValue = pGamma->GetValue();
+    return gammaValue;
+  }
+}
 
-bool ArenaCameraNodeletBase::triggerImage() {
+int64_t ArenaCameraNodeletBase::currentBinningX() {
+  GenApi::CIntegerPtr BinningHorizontal =
+      pDevice_->GetNodeMap()->GetNode("BinningHorizontal");
+
+  if (!BinningHorizontal || !GenApi::IsReadable(BinningHorizontal)) {
+    NODELET_WARN_STREAM("No binningY value, returning -1");
+    return -1;
+  } else {
+    float binningXValue = BinningHorizontal->GetValue();
+    return binningXValue;
+  }
+}
+
+int64_t ArenaCameraNodeletBase::currentBinningY() {
+  GenApi::CIntegerPtr BinningVertical =
+      pDevice_->GetNodeMap()->GetNode("BinningVertical");
+
+  if (!BinningVertical || !GenApi::IsReadable(BinningVertical)) {
+    NODELET_WARN_STREAM("No binningY value, returning -1");
+    return -1;
+  } else {
+    float binningYValue = BinningVertical->GetValue();
+    return binningYValue;
+  }
+}
+
+float ArenaCameraNodeletBase::currentGain() {
+  GenApi::CFloatPtr pGain = pDevice_->GetNodeMap()->GetNode("Gain");
+
+  if (!pGain || !GenApi::IsReadable(pGain)) {
+    NODELET_WARN_STREAM("No gain value");
+    return -1.;
+  } else {
+    float gainValue = pGain->GetValue();
+    return gainValue;
+  }
+}
+
+float ArenaCameraNodeletBase::currentExposure() {
+  GenApi::CFloatPtr pExposureTime =
+      pDevice_->GetNodeMap()->GetNode("ExposureTime");
+
+  if (!pExposureTime || !GenApi::IsReadable(pExposureTime)) {
+    NODELET_WARN_STREAM("No exposure time value, returning -1");
+    return -1.;
+  } else {
+    float exposureValue = pExposureTime->GetValue();
+    return exposureValue;
+  }
+}
+
+std::string ArenaCameraNodeletBase::currentROSEncoding() {
+  std::string gen_api_encoding(Arena::GetNodeValue<GenICam::gcstring>(
+      pDevice_->GetNodeMap(), "PixelFormat"));
+  std::string ros_encoding("");
+  if (!encoding_conversions::genAPI2Ros(gen_api_encoding, ros_encoding)) {
+    std::stringstream ss;
+    ss << "No ROS equivalent to GenApi encoding '" << gen_api_encoding
+       << "' found! This is bad because this case "
+          "should never occur!";
+    throw std::runtime_error(ss.str());
+    return "NO_ENCODING";
+  }
+  return ros_encoding;
+}
+
+bool ArenaCameraNodeletBase::setImageEncoding(const std::string &ros_encoding) {
+  std::string gen_api_encoding;
+  bool conversion_found =
+      encoding_conversions::ros2GenAPI(ros_encoding, gen_api_encoding);
+  if (!conversion_found) {
+    if (ros_encoding.empty()) {
+      return false;
+    } else {
+      std::string fallbackPixelFormat =
+          Arena::GetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(),
+                                                 "PixelFormat")
+              .c_str();
+      NODELET_ERROR_STREAM(
+          "Can't convert ROS encoding '"
+          << ros_encoding
+          << "' to a corresponding GenAPI encoding! Will use current "
+          << "pixel format ( " << fallbackPixelFormat << " ) as fallback!");
+      return false;
+    }
+  }
+  try {
+    GenApi::CEnumerationPtr pPixelFormat =
+        pDevice_->GetNodeMap()->GetNode("PixelFormat");
+    if (GenApi::IsWritable(pPixelFormat)) {
+      Arena::SetNodeValue<GenICam::gcstring>(
+          pDevice_->GetNodeMap(), "PixelFormat", gen_api_encoding.c_str());
+      if (currentROSEncoding() == "16UC3" || currentROSEncoding() == "16UC4")
+        NODELET_WARN_STREAM(
+            "ROS grabbing image data from 3D pixel format, unable to display "
+            "in image viewer");
+    }
+  } catch (const GenICam::GenericException &e) {
+    NODELET_ERROR_STREAM("An exception while setting target image encoding to '"
+                         << ros_encoding
+                         << "' occurred: " << e.GetDescription());
+    return false;
+  }
+  return true;
+}
+
+bool ArenaCameraNodeletBase::sendSoftwareTrigger() {
   boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
   bool retval = false;
 
@@ -802,10 +781,6 @@ const double &ArenaCameraNodeletBase::frameRate() const {
 
 const std::string &ArenaCameraNodeletBase::cameraFrame() const {
   return arena_camera_parameter_set_.cameraFrame();
-}
-
-uint32_t ArenaCameraNodeletBase::getNumSubscribers() const {
-  return img_raw_pub_.getNumSubscribers();
 }
 
 void ArenaCameraNodeletBase::setupInitialCameraInfo(
