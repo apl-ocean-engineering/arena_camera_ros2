@@ -67,8 +67,7 @@ ArenaCameraNodeletBase::ArenaCameraNodeletBase()
       pinhole_model_(),
       camera_info_manager_(nullptr),
       sampling_indices_(),
-      brightness_exp_lut_(),
-      is_sleeping_(false) {}
+      brightness_exp_lut_() {}
 
 ArenaCameraNodeletBase::~ArenaCameraNodeletBase() {
   if (pDevice_ != nullptr) {
@@ -99,8 +98,6 @@ void ArenaCameraNodeletBase::onInit() {
       "set_gamma", &ArenaCameraNodeletBase::setGammaCallback, this);
   set_brightness_srv_ = nh.advertiseService(
       "set_brightness", &ArenaCameraNodeletBase::setBrightnessCallback, this);
-  set_sleeping_srv_ = nh.advertiseService(
-      "set_sleeping", &ArenaCameraNodeletBase::setSleepingCallback, this);
 
   it_.reset(new image_transport::ImageTransport(nh));
   img_raw_pub_ = it_->advertiseCamera("image_raw", 1);
@@ -306,78 +303,24 @@ bool ArenaCameraNodeletBase::configureCamera() {
     //
     // EXPOSURE AUTO & EXPOSURE
     //
-
-    // exposure_auto_ will be already set to false if exposure_given_ is true
-    // read params () solved the priority between them
-    if (arena_camera_parameter_set_.exposure_auto_) {
-      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
-                                             "Continuous");
-      // todo update parameter on the server
-      NODELET_INFO_STREAM("Settings Exposure to auto/Continuous");
-    } else {
-      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto", "Off");
-      // todo update parameter on the server
-      NODELET_INFO_STREAM("Settings Exposure to off/false");
-    }
-
-    if (arena_camera_parameter_set_.exposure_given_) {
-      float reached_exposure;
-      if (setExposure(arena_camera_parameter_set_.exposure_,
-                      reached_exposure)) {
-        // Note: ont update the ros param because it might keep
-        // decreasing or incresing overtime when rerun
-        NODELET_INFO_STREAM("Setting exposure to "
-                            << arena_camera_parameter_set_.exposure_
-                            << ", reached: " << reached_exposure);
-      }
-    }
+    updateExposure();
 
     //
     // GAIN
     //
-
-    // gain_auto_ will be already set to false if gain_given_ is true
-    // read params () solved the priority between them
-    if (arena_camera_parameter_set_.gain_auto_) {
-      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto",
-                                             "Continuous");
-      // todo update parameter on the server
-      NODELET_INFO_STREAM("Settings Gain to auto/Continuous");
-    } else {
-      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Off");
-      // todo update parameter on the server
-      NODELET_INFO_STREAM("Settings Gain to off/false");
-    }
-
-    if (arena_camera_parameter_set_.gain_given_) {
-      float reached_gain;
-      if (setGain(arena_camera_parameter_set_.gain_, reached_gain)) {
-        // Note: ont update the ros param because it might keep
-        // decreasing or incresing overtime when rerun
-        NODELET_INFO_STREAM("Setting gain to: "
-                            << arena_camera_parameter_set_.gain_
-                            << ", reached: " << reached_gain);
-      }
-    }
+    updateGain();
 
     //
     // GAMMA
     //
-    if (arena_camera_parameter_set_.gamma_given_) {
-      float reached_gamma;
-      if (setGamma(arena_camera_parameter_set_.gamma_, reached_gamma)) {
-        NODELET_INFO_STREAM("Setting gamma to "
-                            << arena_camera_parameter_set_.gamma_
-                            << ", reached: " << reached_gamma);
-      }
-    }
+    updateGamma();
 
     // ------------------------------------------------------------------------
 
     //
     //  Initial setting of the CameraInfo-msg, assuming no calibration given
     CameraInfo initial_cam_info;
-    setupInitialCameraInfo(initial_cam_info);
+    initializeCameraInfo(initial_cam_info);
     camera_info_manager_->setCameraInfo(initial_cam_info);
 
     if (arena_camera_parameter_set_.cameraInfoURL().empty() ||
@@ -435,7 +378,7 @@ bool ArenaCameraNodeletBase::configureCamera() {
     // 	float reached_image_encoding;
     // 	if (setImageEncoding(arena_camera_parameter_set_.image_encoding_))
     // 	{
-    // 		NODELET_INFO_STREAM("Setting exposure to "
+    // 		NODELET_INFO_STREAM("Setting encoding to "
     // 						<<
     // arena_camera_parameter_set_.image_encoding_);
     // 	}
@@ -489,10 +432,10 @@ bool ArenaCameraNodeletBase::configureCamera() {
   }
 
   NODELET_INFO("=== Startup settings ===");
-  NODELET_INFO_STREAM("encoding = '" << currentROSEncoding());
+  NODELET_INFO_STREAM("encoding = " << currentROSEncoding());
   NODELET_INFO_STREAM("binning = [" << currentBinningX() << " x "
                                     << currentBinningY() << "]");
-  NODELET_INFO_STREAM("exposure = " << currentExposure());
+  NODELET_INFO_STREAM("exposure = " << currentExposure() << " us");
   NODELET_INFO_STREAM("gain = " << currentGain());
   NODELET_INFO_STREAM("gamma = " << currentGamma());
   NODELET_INFO_STREAM(
@@ -519,7 +462,7 @@ void ArenaCameraNodeletBase::stopStreaming() {
 
 sensor_msgs::RegionOfInterest ArenaCameraNodeletBase::currentROI() {
   sensor_msgs::RegionOfInterest roi;
-  // \todo{amarburg}  Broke this by getting ride of pImage_
+  // \todo{amarburg}  Broke this by getting rid of a member pImage_
   //                  Need to save as state?
   // roi.width = pImage_->GetWidth();
   // roi.height = pImage_->GetHeight();
@@ -730,25 +673,14 @@ void ArenaCameraNodeletBase::updateFrameRate() {
   }
 }
 
-const double &ArenaCameraNodeletBase::frameRate() const {
-  return arena_camera_parameter_set_.frameRate();
-}
-
-const std::string &ArenaCameraNodeletBase::cameraFrame() const {
-  return arena_camera_parameter_set_.cameraFrame();
-}
-
-void ArenaCameraNodeletBase::setupInitialCameraInfo(
+void ArenaCameraNodeletBase::initializeCameraInfo(
     sensor_msgs::CameraInfo &cam_info_msg) {
-  std_msgs::Header header;
-  header.frame_id = arena_camera_parameter_set_.cameraFrame();
-  header.stamp = ros::Time::now();
-
   // http://www.ros.org/reps/rep-0104.html
   // If the camera is uncalibrated, the matrices D, K, R, P should be left
   // zeroed out. In particular, clients may assume that K[0] == 0.0
   // indicates an uncalibrated camera.
-  cam_info_msg.header = header;
+  cam_info_msg.header.frame_id = cameraFrame();
+  cam_info_msg.header.stamp = ros::Time::now();
 
   // The image dimensions with which the camera was calibrated. Normally
   // this will be the full camera resolution in pixels. They remain fix,
@@ -833,6 +765,8 @@ void ArenaCameraNodeletBase::setupInitialCameraInfo(
   cam_info_msg.roi.x_offset = cam_info_msg.roi.y_offset = 0;
   cam_info_msg.roi.height = cam_info_msg.roi.width = 0;
 }
+
+//~~ Binning / ROI ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 bool ArenaCameraNodeletBase::setROI(
     const sensor_msgs::RegionOfInterest target_roi,
@@ -1006,6 +940,35 @@ bool ArenaCameraNodeletBase::setROICallback(
   return true;
 }
 
+//~~ Exposure ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+void ArenaCameraNodeletBase::updateExposure() {
+  auto pNodeMap = pDevice_->GetNodeMap();
+  // exposure_auto_ will be already set to false if exposure_given_ is true
+  // read params () solved the priority between them
+  if (arena_camera_parameter_set_.exposure_auto_) {
+    Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
+                                           "Continuous");
+    // todo update parameter on the server
+    NODELET_INFO_STREAM("Settings Exposure to auto/Continuous");
+  } else {
+    Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto", "Off");
+    // todo update parameter on the server
+    NODELET_INFO_STREAM("Settings Exposure to off/false");
+  }
+
+  if (arena_camera_parameter_set_.exposure_given_) {
+    float reached_exposure;
+    if (setExposure(arena_camera_parameter_set_.exposure_, reached_exposure)) {
+      // Note: ont update the ros param because it might keep
+      // decreasing or incresing overtime when rerun
+      NODELET_INFO_STREAM("Setting exposure to "
+                          << arena_camera_parameter_set_.exposure_
+                          << ", reached: " << reached_exposure);
+    }
+  }
+}
+
 bool ArenaCameraNodeletBase::setExposureValue(const float &target_exposure,
                                               float &reached_exposure) {
   try {
@@ -1089,6 +1052,34 @@ bool ArenaCameraNodeletBase::setExposureCallback(
     camera_control_msgs::SetExposure::Response &res) {
   res.success = setExposure(req.target_exposure, res.reached_exposure);
   return true;
+}
+
+//~~ Gain ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+void ArenaCameraNodeletBase::updateGain() {
+  auto pNodeMap = pDevice_->GetNodeMap();
+  // gain_auto_ will be already set to false if gain_given_ is true
+  // read params () solved the priority between them
+  if (arena_camera_parameter_set_.gain_auto_) {
+    Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Continuous");
+    // todo update parameter on the server
+    NODELET_INFO_STREAM("Settings Gain to auto/Continuous");
+  } else {
+    Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Off");
+    // todo update parameter on the server
+    NODELET_INFO_STREAM("Settings Gain to off/false");
+  }
+
+  if (arena_camera_parameter_set_.gain_given_) {
+    float reached_gain;
+    if (setGain(arena_camera_parameter_set_.gain_, reached_gain)) {
+      // Note: ont update the ros param because it might keep
+      // decreasing or incresing overtime when rerun
+      NODELET_INFO_STREAM("Setting gain to: "
+                          << arena_camera_parameter_set_.gain_
+                          << ", reached: " << reached_gain);
+    }
+  }
 }
 
 bool ArenaCameraNodeletBase::setGainValue(const float &target_gain,
@@ -1180,6 +1171,20 @@ void ArenaCameraNodeletBase::disableAllRunningAutoBrightessFunctions() {
                                            "ExposureAuto", "Off");
     Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto",
                                            "Off");
+  }
+}
+
+//~~ Gamma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+void ArenaCameraNodeletBase::updateGamma() {
+  auto pNodeMap = pDevice_->GetNodeMap();
+  if (arena_camera_parameter_set_.gamma_given_) {
+    float reached_gamma;
+    if (setGamma(arena_camera_parameter_set_.gamma_, reached_gamma)) {
+      NODELET_INFO_STREAM("Setting gamma to "
+                          << arena_camera_parameter_set_.gamma_
+                          << ", reached: " << reached_gamma);
+    }
   }
 }
 
@@ -1546,21 +1551,6 @@ float ArenaCameraNodeletBase::calcCurrentBrightness() {
     }
   }
   return sum;
-}
-
-bool ArenaCameraNodeletBase::setSleepingCallback(
-    camera_control_msgs::SetSleeping::Request &req,
-    camera_control_msgs::SetSleeping::Response &res) {
-  is_sleeping_ = req.set_sleeping;
-
-  if (is_sleeping_) {
-    NODELET_INFO("Setting Arena Camera Node to sleep...");
-  } else {
-    NODELET_INFO("Arena Camera Node continues grabbing");
-  }
-
-  res.success = true;
-  return true;
 }
 
 //------------------------------------------------------------------------

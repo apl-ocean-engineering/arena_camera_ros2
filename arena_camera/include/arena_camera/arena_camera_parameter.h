@@ -206,6 +206,7 @@ class ArenaCameraParameter {
    * e.g. [50 - 205] for acA2500-14um and acA1920-40gm
    */
   bool brightness_continuous_;
+
   /**
    * Only relevant, if 'brightness' is given as ros-parameter:
    * If the camera should try to reach and / or keep the brightness, hence

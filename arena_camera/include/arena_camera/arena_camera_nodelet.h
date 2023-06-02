@@ -49,7 +49,6 @@
 #include <camera_control_msgs/SetGain.h>
 #include <camera_control_msgs/SetGamma.h>
 #include <camera_control_msgs/SetROI.h>
-#include <camera_control_msgs/SetSleeping.h>
 #include <camera_info_manager/camera_info_manager.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <diagnostic_updater/publisher.h>
@@ -85,18 +84,19 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    */
   void onInit() override;
 
-  /**
-   * Getter for the frame rate set by the launch script or from the ros
-   * parameter server
-   * @return the desired frame rate.
-   */
-  const double &frameRate() const;
+  /// Getter for the current frame rate
+  /// @return the desired frame rate.
+  ///
+  const double &frameRate() const {
+    return arena_camera_parameter_set_.frameRate();
+  }
 
-  /**
-   * Getter for the tf frame.
-   * @return the camera frame.
-   */
-  const std::string &cameraFrame() const;
+  /// Getter for the tf frame.
+  /// @return the camera frame.
+  ///
+  const std::string &cameraFrame() const {
+    return arena_camera_parameter_set_.cameraFrame();
+  }
 
   void startStreaming();
   void stopStreaming();
@@ -121,10 +121,9 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
 
   void updateFrameRate();
 
-  /**
-   * Fills the ros CameraInfo-Object with the image dimensions
-   */
-  virtual void setupInitialCameraInfo(sensor_msgs::CameraInfo &cam_info_msg);
+  void updateExposure();
+  void updateGain();
+  void updateGamma();
 
   /**
    * Update area of interest in the camera image
@@ -256,21 +255,6 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
                         camera_control_msgs::SetGamma::Response &res);
 
   /**
-   * Callback that puts the camera to sleep
-   * @param req request
-   * @param res response
-   * @return true on success
-   */
-  bool setSleepingCallback(camera_control_msgs::SetSleeping::Request &req,
-                           camera_control_msgs::SetSleeping::Response &res);
-
-  /**
-   * Returns true if the camera was put into sleep mode
-   * @return true if in sleep mode
-   */
-  bool isSleeping() const { return is_sleeping_; }
-
-  /**
    * Generates the subset of points on which the brightness search will be
    * executed in order to speed it up. The subset are the indices of the
    * one-dimensional image_raw data vector. The base generation is done in a
@@ -321,6 +305,11 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
                     camera_control_msgs::SetBool::Request &req,
                     camera_control_msgs::SetBool::Response &res);
 
+ protected:
+  /// @brief
+  /// @param cam_info_msg
+  void initializeCameraInfo(sensor_msgs::CameraInfo &cam_info_msg);
+
   Arena::ISystem *pSystem_;
   Arena::IDevice *pDevice_;
   GenApi::INodeMap *pNodeMap_;
@@ -349,7 +338,6 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
   ros::ServiceServer set_gain_srv_;
   ros::ServiceServer set_gamma_srv_;
   ros::ServiceServer set_brightness_srv_;
-  ros::ServiceServer set_sleeping_srv_;
   std::vector<ros::ServiceServer> set_user_output_srvs_;
 
   std::unique_ptr<image_transport::ImageTransport> it_;
@@ -366,8 +354,6 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
 
   std::vector<std::size_t> sampling_indices_;
   std::array<float, 256> brightness_exp_lut_;
-
-  bool is_sleeping_;
 
   boost::recursive_mutex device_mutex_;
 
