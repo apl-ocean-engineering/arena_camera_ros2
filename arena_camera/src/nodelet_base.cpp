@@ -159,6 +159,12 @@ void ArenaCameraNodeletBase::onInit() {
     NODELET_FATAL_STREAM("Unable to configure camera");
     return;
   }
+
+  //
+  _dynReconfigureServer = std::make_shared<DynReconfigureServer>(pnh);
+
+  _dynReconfigureServer->setCallback(boost::bind(
+      &ArenaCameraNodeletBase::reconfigureCallbackWrapper, this, _1, _2));
 }
 
 bool ArenaCameraNodeletBase::registerCameraByUserId(
@@ -290,46 +296,8 @@ bool ArenaCameraNodeletBase::configureCamera() {
     //
     // FRAMERATE
     //
-    auto cmdlnParamFrameRate = arena_camera_parameter_set_.frameRate();
-    auto currentFrameRate =
-        Arena::GetNodeValue<double>(pNodeMap, "AcquisitionFrameRate");
-    auto maximumFrameRate =
-        GenApi::CFloatPtr(pNodeMap->GetNode("AcquisitionFrameRate"))->GetMax();
 
-    // requested framerate larger than device max so we trancate it
-    if (cmdlnParamFrameRate >= maximumFrameRate) {
-      arena_camera_parameter_set_.setFrameRate(nh, maximumFrameRate);
-
-      NODELET_WARN(
-          "Desired framerate %.2f Hz (rounded) is higher than max possible. "
-          "Will limit "
-          "framerate device max : %.2f Hz (rounded)",
-          cmdlnParamFrameRate, maximumFrameRate);
-    }
-    // special case:
-    // dues to inacurate float comparision we skip. If we set it it might
-    // throw becase it could be a lil larger than the max avoid the exception
-    // (double accuracy issue when setting the node) request frame rate very
-    // close to device max
-    else if (cmdlnParamFrameRate == maximumFrameRate) {
-      NODELET_INFO("Framerate is %.2f Hz", cmdlnParamFrameRate);
-    }
-    // requested max frame rate
-    else if (cmdlnParamFrameRate ==
-             -1)  // speacial for max frame rate available
-    {
-      arena_camera_parameter_set_.setFrameRate(nh, maximumFrameRate);
-
-      NODELET_WARN("Framerate is set to device max : %.2f Hz",
-                   maximumFrameRate);
-    }
-    // requested framerate is valid so we set it to the device
-    else {
-      Arena::SetNodeValue<bool>(pNodeMap, "AcquisitionFrameRateEnable", true);
-      Arena::SetNodeValue<double>(pNodeMap, "AcquisitionFrameRate",
-                                  cmdlnParamFrameRate);
-      NODELET_INFO("Framerate is set to: %.2f Hz", cmdlnParamFrameRate);
-    }
+    updateFrameRate();
 
     //
     // EXPOSURE AUTO & EXPOSURE
@@ -773,6 +741,52 @@ bool ArenaCameraNodeletBase::setAutoflash(
   //    arena_camera_->setAutoflash(auto_flashs);
   res.success = true;
   return true;
+}
+
+void ArenaCameraNodeletBase::updateFrameRate() {
+  ros::NodeHandle nh = getNodeHandle();
+  auto pNodeMap = pDevice_->GetNodeMap();
+
+  auto cmdlnParamFrameRate = arena_camera_parameter_set_.frameRate();
+  auto currentFrameRate =
+      Arena::GetNodeValue<double>(pNodeMap, "AcquisitionFrameRate");
+  auto maximumFrameRate =
+      GenApi::CFloatPtr(pNodeMap->GetNode("AcquisitionFrameRate"))->GetMax();
+
+  // requested framerate larger than device max so we trancate it
+  if (cmdlnParamFrameRate >= maximumFrameRate) {
+    arena_camera_parameter_set_.setFrameRate(maximumFrameRate);
+
+    NODELET_WARN(
+        "Desired framerate %.2f Hz (rounded) is higher than max possible. "
+        "Will limit "
+        "framerate device max : %.2f Hz (rounded)",
+        cmdlnParamFrameRate, maximumFrameRate);
+  }
+  // special case:
+  // dues to inacurate float comparision we skip. If we set it it might
+  // throw becase it could be a lil larger than the max avoid the exception
+  // (double accuracy issue when setting the node) request frame rate very
+  // close to device max
+  else if (cmdlnParamFrameRate == maximumFrameRate) {
+    NODELET_INFO("Framerate is %.2f Hz", cmdlnParamFrameRate);
+  }
+  // requested max frame rate
+  else if (cmdlnParamFrameRate == -1)  // speacial for max frame rate available
+  {
+    arena_camera_parameter_set_.setFrameRate(maximumFrameRate);
+
+    NODELET_WARN("Framerate is set to device max : %.2f Hz", maximumFrameRate);
+  }
+
+  // requested framerate is valid so we set it to the device
+  Arena::SetNodeValue<bool>(pNodeMap, "AcquisitionFrameRateEnable", true);
+  Arena::SetNodeValue<double>(pNodeMap, "AcquisitionFrameRate",
+                              arena_camera_parameter_set_.frameRate());
+  NODELET_INFO_STREAM(
+      "Framerate is set to:  "
+      << Arena::GetNodeValue<double>(pNodeMap, "AcquisitionFrameRate")
+      << " Hz");
 }
 
 const double &ArenaCameraNodeletBase::frameRate() const {
@@ -1606,6 +1620,25 @@ bool ArenaCameraNodeletBase::setSleepingCallback(
 
   res.success = true;
   return true;
+}
+
+//------------------------------------------------------------------------
+//  ROS Reconfigure callback
+//
+
+void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
+                                                 uint32_t level) {
+  NODELET_INFO_STREAM("In reconfigureCallback");
+
+  if (config.frame_rate != previous_config_.frame_rate) {
+    arena_camera_parameter_set_.setFrameRate(config.frame_rate);
+
+    NODELET_INFO_STREAM("Updating frame rate to " << frameRate() << " fps");
+    updateFrameRate();
+  }
+
+  // Save config
+  previous_config_ = config;
 }
 
 //------------------------------------------------------------------------

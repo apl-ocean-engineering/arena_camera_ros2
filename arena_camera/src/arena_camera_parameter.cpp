@@ -420,10 +420,14 @@ std::string ArenaCameraParameter::shutterModeString() const {
   }
 }
 
-void ArenaCameraParameter::setFrameRate(const ros::NodeHandle& nh,
-                                        const double& frame_rate) {
+// void ArenaCameraParameter::setFrameRate(const ros::NodeHandle& nh,
+//                                         const double& frame_rate) {
+//   frame_rate_ = frame_rate;
+//   nh.setParam("frame_rate", frame_rate_);
+// }
+
+void ArenaCameraParameter::setFrameRate(const double& frame_rate) {
   frame_rate_ = frame_rate;
-  nh.setParam("frame_rate", frame_rate_);
 }
 
 void ArenaCameraParameter::setCameraInfoURL(

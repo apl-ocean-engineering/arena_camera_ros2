@@ -1,33 +1,9 @@
-# http://wiki.ros.org/catkin/CMakeLists.txt
-# using catkin must follow the structure and order ectribed in the file above
-
-# -----------------------------------------------------------------------------
-#
-# 1
-#
-# -----------------------------------------------------------------------------
-
 cmake_minimum_required(VERSION 2.8.3)
-
-
-# -----------------------------------------------------------------------------
-#
-# 2
-#
-# -----------------------------------------------------------------------------
-
 project(arena_camera)
-
-# -----------------------------------------------------------------------------
-#
-# 3
-#
-# -----------------------------------------------------------------------------
 
 #
 # ARENA SDK
 #
-
 # ADDS :
 # - ${_arena_sdk_ROOT}
 # - ${arena_sdk_INCLUDE_DIRS} and ${arena_sdk_INCLUDES}
@@ -46,6 +22,7 @@ endif()
 set(CATKIN_COMPONENTS
      actionlib
      camera_control_msgs # arena_camera depends on this upper custom msg package
+     dynamic_reconfigure
      camera_info_manager
      cv_bridge
      diagnostic_updater
@@ -58,9 +35,6 @@ set(CATKIN_COMPONENTS
      nodelet
 )
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
 find_package(
     catkin
         REQUIRED
@@ -68,42 +42,14 @@ find_package(
         ${CATKIN_COMPONENTS}
 )
 
-
-# -----------------------------------------------------------------------------
-#
-# 4
-#
-# -----------------------------------------------------------------------------
-
-# This macro ensures modules and global scripts declared therein get installed
-# - Enable Python module support
-# - See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
 catkin_python_setup()
 
-
-# -----------------------------------------------------------------------------
 #
-# 5
+# Generate dynamic reconfigure files
 #
-# -----------------------------------------------------------------------------
-
-# N/A
-
-
-# -----------------------------------------------------------------------------
-#
-# 6
-#
-# -----------------------------------------------------------------------------
-
-# N/A
-
-
-# -----------------------------------------------------------------------------
-#
-# 7
-#
-# -----------------------------------------------------------------------------
+generate_dynamic_reconfigure_options(
+  cfg/ArenaCamera.cfg
+)
 
 # http://wiki.ros.org/catkin/CMakeLists.txt#catkin_package.28.29
 catkin_package(

@@ -53,6 +53,7 @@
 #include <camera_info_manager/camera_info_manager.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <diagnostic_updater/publisher.h>
+#include <dynamic_reconfigure/server.h>
 #include <image_geometry/pinhole_camera_model.h>
 #include <image_transport/image_transport.h>
 #include <nodelet/nodelet.h>
@@ -64,6 +65,9 @@
 #include <ArenaApi.h>
 // #include <arena_camera/arena_camera.h>
 #include <arena_camera/arena_camera_parameter.h>
+
+// Auto-generated dynamic_reconfigure header file
+#include <arena_camera/ArenaCameraConfig.h>
 
 namespace arena_camera {
 typedef actionlib::SimpleActionServer<camera_control_msgs::GrabImagesAction>
@@ -111,6 +115,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
   bool configureCamera();
 
   bool setImageEncoding(const std::string& ros_encoding);
+
+  void updateFrameRate();
 
   /**
    * Returns the total number of subscribers on any advertised image topic.
@@ -373,6 +379,18 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
 
   boost::recursive_mutex device_mutex_;
 
+  typedef dynamic_reconfigure::Server<arena_camera::ArenaCameraConfig>
+      DynReconfigureServer;
+  std::shared_ptr<DynReconfigureServer> _dynReconfigureServer;
+
+  // Non-virtual callback which calls virtual function
+  void reconfigureCallbackWrapper(ArenaCameraConfig& config, uint32_t level) {
+    reconfigureCallback(config, level);
+  }
+
+  virtual void reconfigureCallback(ArenaCameraConfig& config, uint32_t level);
+  ArenaCameraConfig previous_config_;
+
   /// diagnostics:
   diagnostic_updater::Updater diagnostics_updater_;
   void diagnostics_timer_callback_(const ros::TimerEvent&);
@@ -396,10 +414,10 @@ class ArenaCameraStreamingNodelet : public ArenaCameraNodeletBase {
   /**
    * Take one image
    */
-  void timerCallback(const ros::TimerEvent&);
+  // void timerCallback(const ros::TimerEvent&);
 
  protected:
-  ros::Timer image_timer_;
+  // ros::Timer image_timer_;
 
   typedef std::function<void(Arena::IImage* pImage)> ImageCallback_t;
 
@@ -445,6 +463,10 @@ class ArenaCameraPolledNodelet : public ArenaCameraNodeletBase {
 
  protected:
   std::unique_ptr<GrabImagesAS> grab_imgs_raw_as_;
+
+  void reconfigureCallback(ArenaCameraConfig& config, uint32_t level) override {
+    ;
+  }
 };
 
 }  // namespace arena_camera

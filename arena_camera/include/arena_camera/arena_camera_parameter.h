@@ -93,7 +93,8 @@ class ArenaCameraParameter {
    * Setter for the frame_rate_ initially set from ros-parameter server
    * The frame rate needs to be updated with the value the camera supports
    */
-  void setFrameRate(const ros::NodeHandle& nh, const double& frame_rate);
+  // void setFrameRate(const ros::NodeHandle& nh, const double& frame_rate);
+  void setFrameRate(const double& frame_rate);
 
   // Getter for the camera_info_url set from ros-parameter server
   const std::string& cameraInfoURL() const { return camera_info_url_; }
