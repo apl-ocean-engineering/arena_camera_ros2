@@ -1,6 +1,10 @@
 /******************************************************************************
  * Software License Agreement (BSD License)
  *
+ * Copyright (C) 2023 University of Washington. All rights reserved.
+ *
+ * based on, with original license that follows
+ *
  * Copyright (C) 2016, Magazino GmbH. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +33,7 @@
 
 #pragma once
 
+#include <arena_camera/ArenaCameraConfig.h>
 #include <ros/ros.h>
 
 #include <string>
@@ -57,21 +62,13 @@ class ArenaCameraParameter {
    * to the default values.
    * @param pnh the **private** ros::NodeHandle to use
    */
-  void readFromRosParameterServer(const ros::NodeHandle& pnh);
+  void readFromRosParameterServer(const ros::NodeHandle &pnh);
 
-  /**
-   * Getter for the device_user_id_ set from ros-parameter server
-   */
-  const std::string& deviceUserID() const;
+  /// Getter for the device_user_id param
+  const std::string &deviceUserID() const { return device_user_id_; }
 
-  const std::string& serialNumber() const;
-
-  /**
-   * Setter for the device_user_id_  to the class and as well
-   * the ros-parameter server
-   */
-  void adaptDeviceUserId(const ros::NodeHandle& nh,
-                         const std::string& device_user_id);
+  /// Getter for the serial number param
+  const std::string &serialNumber() const { return serial_number_; }
 
   int mtuSize() const { return mtu_size_; }
 
@@ -81,30 +78,30 @@ class ArenaCameraParameter {
   std::string shutterModeString() const;
 
   // Getter for the camera_frame_ set from ros-parameter server
-  const std::string& cameraFrame() const { return camera_frame_; }
+  const std::string &cameraFrame() const { return camera_frame_; }
 
   // Getter for the frame_rate_ read from ros-parameter server
-  const double& frameRate() const { return frame_rate_; }
+  const double &frameRate() const { return frame_rate_; }
 
   // Getter for the image_encoding_ read from ros-parameter server
-  const std::string& imageEncoding() const { return image_encoding_; }
+  const std::string &imageEncoding() const { return image_encoding_; }
 
   /**
    * Setter for the frame_rate_ initially set from ros-parameter server
    * The frame rate needs to be updated with the value the camera supports
    */
   // void setFrameRate(const ros::NodeHandle& nh, const double& frame_rate);
-  void setFrameRate(const double& frame_rate);
+  void setFrameRate(const double &frame_rate);
 
   // Getter for the camera_info_url set from ros-parameter server
-  const std::string& cameraInfoURL() const { return camera_info_url_; }
+  const std::string &cameraInfoURL() const { return camera_info_url_; }
 
   /**
    * Setter for the camera_info_url_ if a new CameraInfo-Msgs Object is
    * provided via the SetCameraInfo-service from the CameraInfoManager
    */
-  void setCameraInfoURL(const ros::NodeHandle& nh,
-                        const std::string& camera_info_url);
+  void setCameraInfoURL(const ros::NodeHandle &nh,
+                        const std::string &camera_info_url);
 
  public:
   /** Binning factor to get downsampled images. It refers here to any camera
@@ -289,7 +286,7 @@ class ArenaCameraParameter {
    * to the default values.
    * @param nh the ros::NodeHandle to use
    */
-  void validateParameterSet(const ros::NodeHandle& nh);
+  void validateParameterSet(const ros::NodeHandle &nh);
 
   /**
    * The tf frame under which the images were published

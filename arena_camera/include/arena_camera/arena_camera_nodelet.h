@@ -90,13 +90,16 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * parameter server
    * @return the desired frame rate.
    */
-  const double& frameRate() const;
+  const double &frameRate() const;
 
   /**
    * Getter for the tf frame.
    * @return the camera frame.
    */
-  const std::string& cameraFrame() const;
+  const std::string &cameraFrame() const;
+
+  void startStreaming();
+  void stopStreaming();
 
  protected:
   /**
@@ -104,8 +107,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * or taking the first auto-detected camera.
    * @return false if an error occurred
    */
-  bool registerCameraByUserId(const std::string& device_id);
-  bool registerCameraBySerialNumber(const std::string& serial_number);
+  bool registerCameraByUserId(const std::string &device_id);
+  bool registerCameraBySerialNumber(const std::string &serial_number);
   bool registerCameraByAuto();
 
   /**
@@ -114,27 +117,14 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    */
   bool configureCamera();
 
-  bool setImageEncoding(const std::string& ros_encoding);
+  bool setImageEncoding(const std::string &ros_encoding);
 
   void updateFrameRate();
 
   /**
-   * Returns the total number of subscribers on any advertised image topic.
-   */
-  // uint32_t getNumSubscribers() const;
-
-  virtual bool sendSoftwareTrigger();
-
-  /**
-   * Grabs an image and stores the image in img_raw_msg_
-   * @return false if an error occurred.
-   */
-  virtual bool grabImage();
-
-  /**
    * Fills the ros CameraInfo-Object with the image dimensions
    */
-  virtual void setupInitialCameraInfo(sensor_msgs::CameraInfo& cam_info_msg);
+  virtual void setupInitialCameraInfo(sensor_msgs::CameraInfo &cam_info_msg);
 
   /**
    * Update area of interest in the camera image
@@ -143,7 +133,7 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @return true if the targeted roi could be reached
    */
   bool setROI(const sensor_msgs::RegionOfInterest target_roi,
-              sensor_msgs::RegionOfInterest& reached_roi);
+              sensor_msgs::RegionOfInterest &reached_roi);
 
   /**
    * Update the horizontal binning_x factor to get downsampled images
@@ -152,7 +142,7 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    *        reached
    * @return true if the targeted binning could be reached
    */
-  bool setBinningX(const size_t& target_binning_x, size_t& reached_binning_x);
+  bool setBinningX(const size_t &target_binning_x, size_t &reached_binning_x);
 
   /**
    * Update the vertical binning_y factor to get downsampled images
@@ -161,7 +151,7 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    *        reached
    * @return true if the targeted binning could be reached
    */
-  bool setBinningY(const size_t& target_binning_y, size_t& reached_binning_y);
+  bool setBinningY(const size_t &target_binning_y, size_t &reached_binning_y);
 
   /**
    * Service callback for updating the cameras binning setting
@@ -169,8 +159,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @param res response
    * @return true on success
    */
-  bool setBinningCallback(camera_control_msgs::SetBinning::Request& req,
-                          camera_control_msgs::SetBinning::Response& res);
+  bool setBinningCallback(camera_control_msgs::SetBinning::Request &req,
+                          camera_control_msgs::SetBinning::Response &res);
 
   /**
    * Service callback for updating the cameras roi setting
@@ -178,10 +168,10 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @param res response
    * @return true on success
    */
-  bool setROICallback(camera_control_msgs::SetROI::Request& req,
-                      camera_control_msgs::SetROI::Response& res);
+  bool setROICallback(camera_control_msgs::SetROI::Request &req,
+                      camera_control_msgs::SetROI::Response &res);
 
-  bool setExposureValue(const float& target_exposure, float& reached_exposure);
+  bool setExposureValue(const float &target_exposure, float &reached_exposure);
 
   /**
    * Update the exposure value on the camera
@@ -189,7 +179,7 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @param reached_exposure the exposure that could be reached
    * @return true if the targeted exposure could be reached
    */
-  bool setExposure(const float& target_exposure, float& reached_exposure);
+  bool setExposure(const float &target_exposure, float &reached_exposure);
 
   /**
    * Service callback for setting the exposure
@@ -197,8 +187,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @param res response
    * @return true on success
    */
-  bool setExposureCallback(camera_control_msgs::SetExposure::Request& req,
-                           camera_control_msgs::SetExposure::Response& res);
+  bool setExposureCallback(camera_control_msgs::SetExposure::Request &req,
+                           camera_control_msgs::SetExposure::Response &res);
 
   /**
    * Sets the target brightness which is the intensity-mean over all pixels.
@@ -215,8 +205,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    *                      reached adapting the gain.
    * @return true if the brightness could be reached or false otherwise.
    */
-  bool setBrightness(const int& target_brightness, int& reached_brightness,
-                     const bool& exposure_auto, const bool& gain_auto);
+  bool setBrightness(const int &target_brightness, int &reached_brightness,
+                     const bool &exposure_auto, const bool &gain_auto);
 
   /**
    * Service callback for setting the brightness
@@ -224,10 +214,10 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @param res response
    * @return true on success
    */
-  bool setBrightnessCallback(camera_control_msgs::SetBrightness::Request& req,
-                             camera_control_msgs::SetBrightness::Response& res);
+  bool setBrightnessCallback(camera_control_msgs::SetBrightness::Request &req,
+                             camera_control_msgs::SetBrightness::Response &res);
 
-  bool setGainValue(const float& target_gain, float& reached_gain);
+  bool setGainValue(const float &target_gain, float &reached_gain);
 
   /**
    * Update the gain from the camera to a target gain in percent
@@ -235,7 +225,7 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @param reached_gain the gain that could be reached
    * @return true if the targeted gain could be reached
    */
-  bool setGain(const float& target_gain, float& reached_gain);
+  bool setGain(const float &target_gain, float &reached_gain);
 
   /**
    * Service callback for setting the desired gain in percent
@@ -243,10 +233,10 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @param res response
    * @return true on success
    */
-  bool setGainCallback(camera_control_msgs::SetGain::Request& req,
-                       camera_control_msgs::SetGain::Response& res);
+  bool setGainCallback(camera_control_msgs::SetGain::Request &req,
+                       camera_control_msgs::SetGain::Response &res);
 
-  bool setGammaValue(const float& target_gamma, float& reached_gamma);
+  bool setGammaValue(const float &target_gamma, float &reached_gamma);
 
   /**
    * Update the gamma from the camera to a target gamma correction value
@@ -254,7 +244,7 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @param reached_gamma the gamma that could be reached
    * @return true if the targeted gamma could be reached
    */
-  bool setGamma(const float& target_gamma, float& reached_gamma);
+  bool setGamma(const float &target_gamma, float &reached_gamma);
 
   /**
    * Service callback for setting the desired gamma correction value
@@ -262,8 +252,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @param res response
    * @return true on success
    */
-  bool setGammaCallback(camera_control_msgs::SetGamma::Request& req,
-                        camera_control_msgs::SetGamma::Response& res);
+  bool setGammaCallback(camera_control_msgs::SetGamma::Request &req,
+                        camera_control_msgs::SetGamma::Response &res);
 
   /**
    * Callback that puts the camera to sleep
@@ -271,8 +261,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @param res response
    * @return true on success
    */
-  bool setSleepingCallback(camera_control_msgs::SetSleeping::Request& req,
-                           camera_control_msgs::SetSleeping::Response& res);
+  bool setSleepingCallback(camera_control_msgs::SetSleeping::Request &req,
+                           camera_control_msgs::SetSleeping::Response &res);
 
   /**
    * Returns true if the camera was put into sleep mode
@@ -287,7 +277,7 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * recursive manner, by calling genSamplingIndicesRec
    * @return indices describing the subset of points
    */
-  void setupSamplingIndices(std::vector<std::size_t>& indices, std::size_t rows,
+  void setupSamplingIndices(std::vector<std::size_t> &indices, std::size_t rows,
                             std::size_t cols, int downsampling_factor);
 
   /**
@@ -295,9 +285,9 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * to generate the indices of pixels given the actual ROI.
    * @return indices describing the subset of points
    */
-  void genSamplingIndicesRec(std::vector<std::size_t>& indices,
-                             const std::size_t& min_window_height,
-                             const cv::Point2i& start, const cv::Point2i& end);
+  void genSamplingIndicesRec(std::vector<std::size_t> &indices,
+                             const std::size_t &min_window_height,
+                             const cv::Point2i &start, const cv::Point2i &end);
 
   /**
    * Calculates the mean brightness of the image based on the subset indices
@@ -305,8 +295,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    */
   float calcCurrentBrightness();
 
-  void initCalibrationMatrices(sensor_msgs::CameraInfo& info, const cv::Mat& D,
-                               const cv::Mat& K);
+  void initCalibrationMatrices(sensor_msgs::CameraInfo &info, const cv::Mat &D,
+                               const cv::Mat &K);
 
   /**
    * Callback that sets the digital user output
@@ -316,8 +306,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @return true on success
    */
   bool setUserOutputCB(int output_id,
-                       camera_control_msgs::SetBool::Request& req,
-                       camera_control_msgs::SetBool::Response& res);
+                       camera_control_msgs::SetBool::Request &req,
+                       camera_control_msgs::SetBool::Response &res);
 
   /**
   * Callback that activates the digital user output to
@@ -328,12 +318,14 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
   * @return true on success
   */
   bool setAutoflash(const int output_id,
-                    camera_control_msgs::SetBool::Request& req,
-                    camera_control_msgs::SetBool::Response& res);
+                    camera_control_msgs::SetBool::Request &req,
+                    camera_control_msgs::SetBool::Response &res);
 
-  Arena::ISystem* pSystem_;
-  Arena::IDevice* pDevice_;
-  GenApi::INodeMap* pNodeMap_;
+  Arena::ISystem *pSystem_;
+  Arena::IDevice *pDevice_;
+  GenApi::INodeMap *pNodeMap_;
+
+  bool is_streaming_;
 
   // Hardware accessor functions
   // These might have originally been in arena_camera.h?
@@ -344,10 +336,10 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
   float currentGain();
   float currentExposure();
   std::string currentROSEncoding();
-  bool setBinningXValue(const size_t& target_binning_x,
-                        size_t& reached_binning_x);
-  bool setBinningYValue(const size_t& target_binning_y,
-                        size_t& reached_binning_y);
+  bool setBinningXValue(const size_t &target_binning_x,
+                        size_t &reached_binning_x);
+  bool setBinningYValue(const size_t &target_binning_y,
+                        size_t &reached_binning_y);
   void disableAllRunningAutoBrightessFunctions();
 
   ArenaCameraParameter arena_camera_parameter_set_;
@@ -370,7 +362,7 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
   // Don't like using this global member
   sensor_msgs::Image img_raw_msg_;
 
-  camera_info_manager::CameraInfoManager* camera_info_manager_;
+  camera_info_manager::CameraInfoManager *camera_info_manager_;
 
   std::vector<std::size_t> sampling_indices_;
   std::array<float, 256> brightness_exp_lut_;
@@ -384,20 +376,20 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
   std::shared_ptr<DynReconfigureServer> _dynReconfigureServer;
 
   // Non-virtual callback which calls virtual function
-  void reconfigureCallbackWrapper(ArenaCameraConfig& config, uint32_t level) {
+  void reconfigureCallbackWrapper(ArenaCameraConfig &config, uint32_t level) {
     reconfigureCallback(config, level);
   }
 
-  virtual void reconfigureCallback(ArenaCameraConfig& config, uint32_t level);
+  virtual void reconfigureCallback(ArenaCameraConfig &config, uint32_t level);
   ArenaCameraConfig previous_config_;
 
   /// diagnostics:
   diagnostic_updater::Updater diagnostics_updater_;
-  void diagnostics_timer_callback_(const ros::TimerEvent&);
+  void diagnostics_timer_callback_(const ros::TimerEvent &);
   ros::Timer diagnostics_trigger_;
-  void create_diagnostics(diagnostic_updater::DiagnosticStatusWrapper& stat);
+  void create_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
   void create_camera_info_diagnostics(
-      diagnostic_updater::DiagnosticStatusWrapper& stat);
+      diagnostic_updater::DiagnosticStatusWrapper &stat);
 };
 
 class ArenaCameraStreamingNodelet : public ArenaCameraNodeletBase {
@@ -419,7 +411,7 @@ class ArenaCameraStreamingNodelet : public ArenaCameraNodeletBase {
  protected:
   // ros::Timer image_timer_;
 
-  typedef std::function<void(Arena::IImage* pImage)> ImageCallback_t;
+  typedef std::function<void(Arena::IImage *pImage)> ImageCallback_t;
 
   class ImageCallback : public Arena::IImageCallback {
    public:
@@ -427,13 +419,13 @@ class ArenaCameraStreamingNodelet : public ArenaCameraNodeletBase {
 
     ~ImageCallback() {}
 
-    void OnImage(Arena::IImage* pImage) { image_callback_(pImage); }
+    void OnImage(Arena::IImage *pImage) { image_callback_(pImage); }
 
    private:
     ImageCallback_t image_callback_;
   } image_callback_obj_;
 
-  void imageCallback(Arena::IImage* pImage);
+  void imageCallback(Arena::IImage *pImage);
 };
 
 class ArenaCameraPolledNodelet : public ArenaCameraNodeletBase {
@@ -452,19 +444,25 @@ class ArenaCameraPolledNodelet : public ArenaCameraNodeletBase {
    * @param goal the goal
    */
   void grabImagesRawActionExecuteCB(
-      const camera_control_msgs::GrabImagesGoal::ConstPtr& goal);
+      const camera_control_msgs::GrabImagesGoal::ConstPtr &goal);
 
   /**
    * This function can also be called from the derived ArenaCameraOpenCV-Class
    */
   camera_control_msgs::GrabImagesResult grabImagesRaw(
-      const camera_control_msgs::GrabImagesGoal::ConstPtr& goal,
-      GrabImagesAS* action_server);
+      const camera_control_msgs::GrabImagesGoal::ConstPtr &goal,
+      GrabImagesAS *action_server);
 
  protected:
+  virtual bool sendSoftwareTrigger();
+
+  /// Grabs an image and stores the image in img_raw_msg_
+  /// @return false if an error occurred.
+  virtual bool grabImage();
+
   std::unique_ptr<GrabImagesAS> grab_imgs_raw_as_;
 
-  void reconfigureCallback(ArenaCameraConfig& config, uint32_t level) override {
+  void reconfigureCallback(ArenaCameraConfig &config, uint32_t level) override {
     ;
   }
 };

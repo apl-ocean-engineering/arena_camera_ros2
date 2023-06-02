@@ -53,7 +53,7 @@ void ArenaCameraStreamingNodelet::onInit() {
   ArenaCameraNodeletBase::onInit();
 
   try {
-    pDevice_->StartStream();
+    startStreaming();
   } catch (GenICam::GenericException &e) {
     NODELET_ERROR_STREAM("Error while configuring camera: \r\n"
                          << e.GetDescription());
@@ -61,35 +61,7 @@ void ArenaCameraStreamingNodelet::onInit() {
   }
 
   pDevice_->RegisterImageCallback(&image_callback_obj_);
-
-  // ros::NodeHandle nh = getNodeHandle();
-  // image_timer_ =
-  //     nh.createTimer(ros::Duration(1.0 / frameRate()),
-  //                    &ArenaCameraStreamingNodelet::timerCallback, this);
 }
-
-// void ArenaCameraStreamingNodelet::spin() {
-// void ArenaCameraStreamingNodelet::timerCallback(const ros::TimerEvent &) {
-// NODELET_INFO("Timer callback");
-// return;
-
-//   if (camera_info_manager_->isCalibrated()) {
-//     NODELET_INFO_ONCE("Camera is calibrated");
-//   } else {
-//     NODELET_INFO_ONCE("Camera not calibrated");
-//   }
-
-//   if (pDevice_->IsConnected() == false) {
-//     NODELET_ERROR("Arena camera has disconnected, giving up!");
-//     image_timer_.stop();
-//     return;
-//   }
-
-//   if (!isSleeping() && (img_raw_pub_.getNumSubscribers())) {
-//     NODELET_DEBUG("Triggering image...");
-//     sendSoftwareTrigger();
-//   }
-// }
 
 void ArenaCameraStreamingNodelet::imageCallback(Arena::IImage *pImage) {
   // Is this always true if the ImageCallback is called?

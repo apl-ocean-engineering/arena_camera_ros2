@@ -126,11 +126,11 @@ set(streaming_arena_camera_node streaming_arena_camera)
 set(polled_arena_camera_node polled_arena_camera)
 
 add_executable( ${streaming_arena_camera_node}
-    src/streaming_node_main.cpp
+    src/nodes/streaming_node_main.cpp
 )
 
 add_executable( ${polled_arena_camera_node}
-    src/polled_node_main.cpp
+    src/nodes/polled_node_main.cpp
 )
 
 foreach( camera_node ${streaming_arena_camera_node} ${polled_arena_camera_node} )

@@ -341,12 +341,6 @@ void ArenaCameraParameter::readFromRosParameterServer(
   return;
 }
 
-void ArenaCameraParameter::adaptDeviceUserId(
-    const ros::NodeHandle& nh, const std::string& device_user_id) {
-  device_user_id_ = device_user_id;
-  nh.setParam("device_user_id", device_user_id_);
-}
-
 void ArenaCameraParameter::validateParameterSet(const ros::NodeHandle& nh) {
   // Put this validation closer to the point of use
   // if (!device_user_id_.empty()) {
@@ -398,14 +392,6 @@ void ArenaCameraParameter::validateParameterSet(const ros::NodeHandle& nh) {
   }
 
   return;
-}
-
-const std::string& ArenaCameraParameter::deviceUserID() const {
-  return device_user_id_;
-}
-
-const std::string& ArenaCameraParameter::serialNumber() const {
-  return serial_number_;
 }
 
 std::string ArenaCameraParameter::shutterModeString() const {

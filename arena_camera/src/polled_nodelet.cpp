@@ -64,6 +64,103 @@ void ArenaCameraPolledNodelet::onInit() {
   grab_imgs_raw_as_->start();
 }
 
+bool ArenaCameraPolledNodelet::sendSoftwareTrigger() {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
+  bool retval = false;
+
+  try {
+    GenApi::CStringPtr pTriggerMode =
+        pDevice_->GetNodeMap()->GetNode("TriggerMode");
+
+    if (GenApi::IsWritable(pTriggerMode)) {
+      bool isTriggerArmed = false;
+
+      do {
+        isTriggerArmed =
+            Arena::GetNodeValue<bool>(pDevice_->GetNodeMap(), "TriggerArmed");
+      } while (isTriggerArmed == false);
+      Arena::ExecuteNode(pDevice_->GetNodeMap(), "TriggerSoftware");
+    }
+  } catch (GenICam::GenericException &e) {
+    ;
+  }
+
+  return true;
+}
+
+bool ArenaCameraPolledNodelet::grabImage() {
+  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
+  bool retval = false;
+
+  try {
+    GenApi::CStringPtr pTriggerMode =
+        pDevice_->GetNodeMap()->GetNode("TriggerMode");
+
+    if (GenApi::IsWritable(pTriggerMode)) {
+      bool isTriggerArmed = false;
+
+      do {
+        isTriggerArmed =
+            Arena::GetNodeValue<bool>(pDevice_->GetNodeMap(), "TriggerArmed");
+      } while (isTriggerArmed == false);
+      Arena::ExecuteNode(pDevice_->GetNodeMap(), "TriggerSoftware");
+    }
+
+    Arena::IBuffer *pBuffer = pDevice_->GetBuffer(250);
+
+    if (pBuffer->HasImageData()) {
+      Arena::IImage *pImage = dynamic_cast<Arena::IImage *>(pBuffer);
+
+      if (pImage->IsIncomplete()) {
+        auto node_map = pDevice_->GetNodeMap();
+        const auto payload_size =
+            Arena::GetNodeValue<int64_t>(node_map, "PayloadSize");
+        if (pBuffer->DataLargerThanBuffer()) {
+          NODELET_WARN_STREAM("Image incomplete: data larger than buffer;  "
+                              << pBuffer->GetSizeOfBuffer() << " > "
+                              << payload_size);
+        } else {
+          NODELET_WARN_STREAM("Image incomplete: Payload size = "
+                              << pBuffer->GetSizeFilled() << " , buffer size = "
+                              << pBuffer->GetSizeOfBuffer() << " , expected "
+                              << payload_size);
+        }
+
+        goto out;
+      }
+
+      img_raw_msg_.header.stamp = ros::Time::now();
+
+      // Will return false if PixelEndiannessUnknown
+      img_raw_msg_.is_bigendian =
+          (pImage->GetPixelEndianness() == Arena::PixelEndiannessBig);
+
+      img_raw_msg_.encoding = currentROSEncoding();
+      img_raw_msg_.height = pImage->GetHeight();
+      img_raw_msg_.width = pImage->GetWidth();
+
+      const unsigned int bytes_per_pixel = pImage->GetBitsPerPixel() / 8;
+      img_raw_msg_.step = img_raw_msg_.width * bytes_per_pixel;
+
+      const unsigned int data_size = img_raw_msg_.height * img_raw_msg_.step;
+
+      // \todo{amarburg} Compare to Buffer/Image payload size
+
+      img_raw_msg_.data.resize(data_size);
+      memcpy(&img_raw_msg_.data[0], pImage->GetData(), data_size);
+
+      retval = true;
+    }
+
+  out:
+    pDevice_->RequeueBuffer(pBuffer);
+  } catch (GenICam::GenericException &e) {
+    ;
+  }
+
+  return retval;
+}
+
 void ArenaCameraPolledNodelet::grabImagesRawActionExecuteCB(
     const camera_control_msgs::GrabImagesGoal::ConstPtr &goal) {
   camera_control_msgs::GrabImagesResult result;

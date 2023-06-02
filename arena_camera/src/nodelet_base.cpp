@@ -59,6 +59,7 @@ ArenaCameraNodeletBase::ArenaCameraNodeletBase()
     : pSystem_(nullptr),
       pDevice_(nullptr),
       pNodeMap_(nullptr),
+      is_streaming_(false),
       arena_camera_parameter_set_(),
       set_user_output_srvs_(),
       it_(nullptr),
@@ -80,7 +81,7 @@ ArenaCameraNodeletBase::~ArenaCameraNodeletBase() {
 }
 
 //
-// Nodelet::onInit  function
+// Nodelet::onInit() function
 
 void ArenaCameraNodeletBase::onInit() {
   ros::NodeHandle nh = getNodeHandle();
@@ -246,6 +247,10 @@ bool ArenaCameraNodeletBase::configureCamera() {
   ros::NodeHandle nh = getNodeHandle();
   auto pNodeMap = pDevice_->GetNodeMap();
 
+  // **NOTE** only configuration which is not also accessible through
+  // dynamic_reconfigure.  Those will be handled in the callback
+  // when it is called for the first time at node startup.
+
   try {
     //
     // Arena device prior streaming settings
@@ -296,8 +301,7 @@ bool ArenaCameraNodeletBase::configureCamera() {
     //
     // FRAMERATE
     //
-
-    updateFrameRate();
+    // updateFrameRate();
 
     //
     // EXPOSURE AUTO & EXPOSURE
@@ -484,18 +488,33 @@ bool ArenaCameraNodeletBase::configureCamera() {
                         << "] name not valid for camera_info_manager");
   }
 
-  NODELET_INFO_STREAM("Startup settings: "
-                      << "encoding = '" << currentROSEncoding() << "', "
-                      << "binning = [" << currentBinningX() << ", "
-                      << currentBinningY() << "], "
-                      << "exposure = " << currentExposure() << ", "
-                      << "gain = " << currentGain() << ", "
-                      << "gamma = " << currentGamma() << ", "
-                      << "shutter mode = "
-                      << arena_camera_parameter_set_.shutterModeString());
+  NODELET_INFO("=== Startup settings ===");
+  NODELET_INFO_STREAM("encoding = '" << currentROSEncoding());
+  NODELET_INFO_STREAM("binning = [" << currentBinningX() << " x "
+                                    << currentBinningY() << "]");
+  NODELET_INFO_STREAM("exposure = " << currentExposure());
+  NODELET_INFO_STREAM("gain = " << currentGain());
+  NODELET_INFO_STREAM("gamma = " << currentGamma());
+  NODELET_INFO_STREAM(
+      "shutter mode = " << arena_camera_parameter_set_.shutterModeString());
+  NODELET_INFO("========================");
 
   // pDevice_->RequeueBuffer(pImage_);
   return true;
+}
+
+void ArenaCameraNodeletBase::startStreaming() {
+  if (!is_streaming_) {
+    pDevice_->StartStream();
+    is_streaming_ = true;
+  }
+}
+
+void ArenaCameraNodeletBase::stopStreaming() {
+  if (is_streaming_) {
+    pDevice_->StopStream();
+    is_streaming_ = false;
+  }
 }
 
 sensor_msgs::RegionOfInterest ArenaCameraNodeletBase::currentROI() {
@@ -628,103 +647,6 @@ bool ArenaCameraNodeletBase::setImageEncoding(const std::string &ros_encoding) {
   return true;
 }
 
-bool ArenaCameraNodeletBase::sendSoftwareTrigger() {
-  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
-  bool retval = false;
-
-  try {
-    GenApi::CStringPtr pTriggerMode =
-        pDevice_->GetNodeMap()->GetNode("TriggerMode");
-
-    if (GenApi::IsWritable(pTriggerMode)) {
-      bool isTriggerArmed = false;
-
-      do {
-        isTriggerArmed =
-            Arena::GetNodeValue<bool>(pDevice_->GetNodeMap(), "TriggerArmed");
-      } while (isTriggerArmed == false);
-      Arena::ExecuteNode(pDevice_->GetNodeMap(), "TriggerSoftware");
-    }
-  } catch (GenICam::GenericException &e) {
-    ;
-  }
-
-  return true;
-}
-
-bool ArenaCameraNodeletBase::grabImage() {
-  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
-  bool retval = false;
-
-  try {
-    GenApi::CStringPtr pTriggerMode =
-        pDevice_->GetNodeMap()->GetNode("TriggerMode");
-
-    if (GenApi::IsWritable(pTriggerMode)) {
-      bool isTriggerArmed = false;
-
-      do {
-        isTriggerArmed =
-            Arena::GetNodeValue<bool>(pDevice_->GetNodeMap(), "TriggerArmed");
-      } while (isTriggerArmed == false);
-      Arena::ExecuteNode(pDevice_->GetNodeMap(), "TriggerSoftware");
-    }
-
-    Arena::IBuffer *pBuffer = pDevice_->GetBuffer(250);
-
-    if (pBuffer->HasImageData()) {
-      Arena::IImage *pImage = dynamic_cast<Arena::IImage *>(pBuffer);
-
-      if (pImage->IsIncomplete()) {
-        auto node_map = pDevice_->GetNodeMap();
-        const auto payload_size =
-            Arena::GetNodeValue<int64_t>(node_map, "PayloadSize");
-        if (pBuffer->DataLargerThanBuffer()) {
-          NODELET_WARN_STREAM("Image incomplete: data larger than buffer;  "
-                              << pBuffer->GetSizeOfBuffer() << " > "
-                              << payload_size);
-        } else {
-          NODELET_WARN_STREAM("Image incomplete: Payload size = "
-                              << pBuffer->GetSizeFilled() << " , buffer size = "
-                              << pBuffer->GetSizeOfBuffer() << " , expected "
-                              << payload_size);
-        }
-
-        goto out;
-      }
-
-      img_raw_msg_.header.stamp = ros::Time::now();
-
-      // Will return false if PixelEndiannessUnknown
-      img_raw_msg_.is_bigendian =
-          (pImage->GetPixelEndianness() == Arena::PixelEndiannessBig);
-
-      img_raw_msg_.encoding = currentROSEncoding();
-      img_raw_msg_.height = pImage->GetHeight();
-      img_raw_msg_.width = pImage->GetWidth();
-
-      const unsigned int bytes_per_pixel = pImage->GetBitsPerPixel() / 8;
-      img_raw_msg_.step = img_raw_msg_.width * bytes_per_pixel;
-
-      const unsigned int data_size = img_raw_msg_.height * img_raw_msg_.step;
-
-      // \todo{amarburg} Compare to Buffer/Image payload size
-
-      img_raw_msg_.data.resize(data_size);
-      memcpy(&img_raw_msg_.data[0], pImage->GetData(), data_size);
-
-      retval = true;
-    }
-
-  out:
-    pDevice_->RequeueBuffer(pBuffer);
-  } catch (GenICam::GenericException &e) {
-    ;
-  }
-
-  return retval;
-}
-
 bool ArenaCameraNodeletBase::setUserOutputCB(
     const int output_id, camera_control_msgs::SetBool::Request &req,
     camera_control_msgs::SetBool::Response &res) {
@@ -744,49 +666,68 @@ bool ArenaCameraNodeletBase::setAutoflash(
 }
 
 void ArenaCameraNodeletBase::updateFrameRate() {
-  ros::NodeHandle nh = getNodeHandle();
-  auto pNodeMap = pDevice_->GetNodeMap();
+  try {
+    ros::NodeHandle nh = getNodeHandle();
+    auto pNodeMap = pDevice_->GetNodeMap();
 
-  auto cmdlnParamFrameRate = arena_camera_parameter_set_.frameRate();
-  auto currentFrameRate =
-      Arena::GetNodeValue<double>(pNodeMap, "AcquisitionFrameRate");
-  auto maximumFrameRate =
-      GenApi::CFloatPtr(pNodeMap->GetNode("AcquisitionFrameRate"))->GetMax();
+    stopStreaming();
 
-  // requested framerate larger than device max so we trancate it
-  if (cmdlnParamFrameRate >= maximumFrameRate) {
-    arena_camera_parameter_set_.setFrameRate(maximumFrameRate);
+    auto cmdlnParamFrameRate = arena_camera_parameter_set_.frameRate();
+    auto currentFrameRate =
+        Arena::GetNodeValue<double>(pNodeMap, "AcquisitionFrameRate");
+    auto maximumFrameRate =
+        GenApi::CFloatPtr(pNodeMap->GetNode("AcquisitionFrameRate"))->GetMax();
 
-    NODELET_WARN(
-        "Desired framerate %.2f Hz (rounded) is higher than max possible. "
-        "Will limit "
-        "framerate device max : %.2f Hz (rounded)",
-        cmdlnParamFrameRate, maximumFrameRate);
+    // requested framerate larger than device max so we trancate it
+    if (cmdlnParamFrameRate >= maximumFrameRate) {
+      arena_camera_parameter_set_.setFrameRate(maximumFrameRate);
+
+      NODELET_WARN(
+          "Desired framerate %.2f Hz (rounded) is higher than max possible. "
+          "Will limit "
+          "framerate device max : %.2f Hz (rounded)",
+          cmdlnParamFrameRate, maximumFrameRate);
+    }
+    // special case:
+    // dues to inacurate float comparision we skip. If we set it it might
+    // throw becase it could be a lil larger than the max avoid the exception
+    // (double accuracy issue when setting the node) request frame rate very
+    // close to device max
+    else if (cmdlnParamFrameRate == maximumFrameRate) {
+      NODELET_INFO("Framerate is %.2f Hz", cmdlnParamFrameRate);
+    }
+    // requested max frame rate
+    else if (cmdlnParamFrameRate ==
+             -1)  // speacial for max frame rate available
+    {
+      arena_camera_parameter_set_.setFrameRate(maximumFrameRate);
+
+      NODELET_WARN("Framerate is set to device max : %.2f Hz",
+                   maximumFrameRate);
+    }
+
+    // requested framerate is valid so we set it to the device
+    try {
+      if (!Arena::GetNodeValue<bool>(pNodeMap, "AcquisitionFrameRateEnable")) {
+        NODELET_INFO(
+            "\"AcquisitionFrameRateEnable\" not true, trying to enable");
+        Arena::SetNodeValue<bool>(pNodeMap, "AcquisitionFrameRateEnable", true);
+      }
+      Arena::SetNodeValue<double>(pNodeMap, "AcquisitionFrameRate",
+                                  arena_camera_parameter_set_.frameRate());
+    } catch (GenICam::GenericException &e) {
+      NODELET_INFO_STREAM("Exception while changing frame rate: " << e.what());
+    }
+    NODELET_INFO_STREAM(
+        "Framerate has been set to "
+        << Arena::GetNodeValue<double>(pNodeMap, "AcquisitionFrameRate")
+        << " Hz");
+
+    startStreaming();
+
+  } catch (GenICam::GenericException &e) {
+    NODELET_INFO_STREAM("Exception while changing frame rate: " << e.what());
   }
-  // special case:
-  // dues to inacurate float comparision we skip. If we set it it might
-  // throw becase it could be a lil larger than the max avoid the exception
-  // (double accuracy issue when setting the node) request frame rate very
-  // close to device max
-  else if (cmdlnParamFrameRate == maximumFrameRate) {
-    NODELET_INFO("Framerate is %.2f Hz", cmdlnParamFrameRate);
-  }
-  // requested max frame rate
-  else if (cmdlnParamFrameRate == -1)  // speacial for max frame rate available
-  {
-    arena_camera_parameter_set_.setFrameRate(maximumFrameRate);
-
-    NODELET_WARN("Framerate is set to device max : %.2f Hz", maximumFrameRate);
-  }
-
-  // requested framerate is valid so we set it to the device
-  Arena::SetNodeValue<bool>(pNodeMap, "AcquisitionFrameRateEnable", true);
-  Arena::SetNodeValue<double>(pNodeMap, "AcquisitionFrameRate",
-                              arena_camera_parameter_set_.frameRate());
-  NODELET_INFO_STREAM(
-      "Framerate is set to:  "
-      << Arena::GetNodeValue<double>(pNodeMap, "AcquisitionFrameRate")
-      << " Hz");
 }
 
 const double &ArenaCameraNodeletBase::frameRate() const {
@@ -1343,10 +1284,10 @@ bool ArenaCameraNodeletBase::setBrightness(const int &target_brightness,
   }
 
   // get actual image -> fills img_raw_msg_.data vector
-  if (!grabImage()) {
-    NODELET_ERROR("Failed to grab image, can't calculate current brightness!");
-    return false;
-  }
+  // if (!grabImage()) {
+  //   NODELET_ERROR("Failed to grab image, can't calculate current
+  //   brightness!"); return false;
+  // }
 
   // calculates current brightness by generating the mean over all pixels
   // stored in img_raw_msg_.data vector
@@ -1427,9 +1368,9 @@ bool ArenaCameraNodeletBase::setBrightness(const int &target_brightness,
     //         break;
     // }
 
-    if (!grabImage()) {
-      return false;
-    }
+    // if (!grabImage()) {
+    //   return false;
+    // }
 
     // if ( arena_camera_->isArenaAutoBrightnessFunctionRunning() )
     // {
