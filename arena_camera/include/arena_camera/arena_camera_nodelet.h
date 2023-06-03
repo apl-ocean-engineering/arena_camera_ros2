@@ -409,6 +409,10 @@ class ArenaCameraStreamingNodelet : public ArenaCameraNodeletBase {
 
    private:
     ImageCallback_t image_callback_;
+
+    ImageCallback() = delete;
+    ImageCallback(const ImageCallback &) = delete;
+    ImageCallback operator=(const ImageCallback &) = delete;
   } image_callback_obj_;
 
   void imageCallback(Arena::IImage *pImage);

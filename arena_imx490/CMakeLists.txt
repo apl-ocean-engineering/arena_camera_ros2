@@ -102,7 +102,7 @@ add_dependencies( ${arena_imx490_lib_name}
 set(arena_imx490_node_name arena_imx490_node)
 
 add_executable( ${arena_imx490_node_name}
-    src/node_main.cpp
+    src/nodes/imx490_main.cpp
 )
 
 target_include_directories( ${arena_imx490_node_name}

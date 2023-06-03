@@ -22,7 +22,7 @@ A "generic" ROS node for Lucid cameras.  See the [README](arena_camera/README) i
 
 ## arena_imx490
 
-This node has been tuned / simplified for the HDR modes of the IMX490-based Lucid cameras.
+This ROS node is a built on a `arena_camera` that is specifically designed for the HDR modes of the IMX490-based Lucid cameras.
 # License
 
-This code is forked from the Lucid Vision's code, which in turn is forked from [Basler's ROS node for their Pylon library](https://github.com/magazino/pylon_camera), which is released under the [BSD 3-Clause License](LICENSE).
+This code is forked from the [Lucid Vision's ROS node](https://github.com/lucidvisionlabs/arena_camera_ros), which in turn is forked from [Basler's ROS node for their Pylon library](https://github.com/magazino/pylon_camera), which is released under the [BSD 3-Clause License](LICENSE).

@@ -46,10 +46,14 @@ const std::string RGB8 = "rgb8";
 const std::string RGBA8 = "rgba8";
 const std::string RGB16 = "rgb16";
 const std::string RGBA16 = "rgba16";
+const std::string RGB24 = "rgb24";
+
 const std::string BGR8 = "bgr8";
 const std::string BGRA8 = "bgra8";
 const std::string BGR16 = "bgr16";
 const std::string BGRA16 = "bgra16";
+const std::string BGR24 = "bgr24";
+
 const std::string MONO8 = "mono8";
 const std::string MONO16 = "mono16";
 const std::string CONFIDENCE16 = "confidence16";
@@ -95,6 +99,8 @@ const std::string BAYER_RGGB16 = "bayer_rggb16";
 const std::string BAYER_BGGR16 = "bayer_bggr16";
 const std::string BAYER_GBRG16 = "bayer_gbrg16";
 const std::string BAYER_GRBG16 = "bayer_grbg16";
+
+const std::string BAYER_RGGB24 = "bayer_rggb24";
 
 // Miscellaneous
 // This is the UYVY version of YUV422 codec http://www.fourcc.org/yuv.php#UYVY

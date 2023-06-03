@@ -57,17 +57,13 @@ void ArenaIMX490Nodelet::onInit() {
     return;
   }
 
-  // ros::NodeHandle nh = getNodeHandle();
-  // pDevice_->RegisterImageCallback(&image_callback_obj_);
-
-  // image_timer_ =
-  //     nh.createTimer(ros::Duration(1.0 / frameRate()),
-  //                    &ArenaCameraStreamingNodelet::timerCallback,
-  //                    dynamic_cast<ArenaCameraStreamingNodelet*>(this));
+  pDevice_->RegisterImageCallback(&image_callback_obj_);
 }
 
 bool ArenaIMX490Nodelet::configureHDR() {
   auto pNodeMap = pDevice_->GetNodeMap();
+
+  NODELET_INFO("Enabling HDR mode in camera");
 
   try {
     // GenApi::CStringPtr pHDROutput = pNodeMap->GetNode("HDROutput");
@@ -77,6 +73,9 @@ bool ArenaIMX490Nodelet::configureHDR() {
 
     // // Enable HDR image enhancement
     Arena::SetNodeValue<bool>(pNodeMap, "HDRImageEnhancementEnable", true);
+    Arena::SetNodeValue<bool>(pNodeMap, "HDRTuningEnable", true);
+
+    Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "HDROutput", "HDR");
 
   } catch (GenICam::GenericException &e) {
     NODELET_ERROR_STREAM(

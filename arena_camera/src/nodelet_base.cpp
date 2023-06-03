@@ -613,6 +613,7 @@ void ArenaCameraNodeletBase::updateFrameRate() {
     ros::NodeHandle nh = getNodeHandle();
     auto pNodeMap = pDevice_->GetNodeMap();
 
+    const bool was_streaming = is_streaming_;
     stopStreaming();
 
     auto cmdlnParamFrameRate = arena_camera_parameter_set_.frameRate();
@@ -666,7 +667,7 @@ void ArenaCameraNodeletBase::updateFrameRate() {
         << Arena::GetNodeValue<double>(pNodeMap, "AcquisitionFrameRate")
         << " Hz");
 
-    startStreaming();
+    if (was_streaming) startStreaming();
 
   } catch (GenICam::GenericException &e) {
     NODELET_INFO_STREAM("Exception while changing frame rate: " << e.what());
