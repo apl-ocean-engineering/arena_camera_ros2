@@ -41,7 +41,6 @@
   <build_depend>nodelet</build_depend>
   <build_depend>arena_camera</build_depend>
 
-
   <exec_depend>actionlib</exec_depend>
   <exec_depend>camera_control_msgs</exec_depend>
   <exec_depend>camera_info_manager</exec_depend>

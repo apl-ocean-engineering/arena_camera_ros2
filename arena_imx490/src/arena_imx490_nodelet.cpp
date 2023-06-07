@@ -73,7 +73,7 @@ bool ArenaIMX490Nodelet::configureHDR() {
 
     // // Enable HDR image enhancement
     Arena::SetNodeValue<bool>(pNodeMap, "HDRImageEnhancementEnable", true);
-    Arena::SetNodeValue<bool>(pNodeMap, "HDRTuningEnable", true);
+    Arena::SetNodeValue<bool>(pNodeMap, "HDRTuningEnable", false);
 
     Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "HDROutput", "HDR");
 

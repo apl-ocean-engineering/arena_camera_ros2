@@ -249,6 +249,13 @@ bool ArenaCameraNodeletBase::configureCamera() {
   // when it is called for the first time at node startup.
 
   try {
+    NODELET_INFO_STREAM(
+        "   Device model: " << Arena::GetNodeValue<GenICam::gcstring>(
+            pDevice_->GetNodeMap(), "DeviceModelName"));
+    NODELET_INFO_STREAM(
+        "Device firmware: " << Arena::GetNodeValue<GenICam::gcstring>(
+            pDevice_->GetNodeMap(), "DeviceFirmwareVersion"));
+
     //
     // Arena device prior streaming settings
     //

@@ -8,7 +8,7 @@
   </class>
 
     <class name="arena_camera/ArenaCameraPolledNodelet"
-         type="arena_camera::ArenaCameraPollesNodelet"
+         type="arena_camera::ArenaCameraPolledNodelet"
          base_class_type="nodelet::Nodelet">
   <description>
     Nodelet for accessing LucidVision cameras through the Arena SDK.

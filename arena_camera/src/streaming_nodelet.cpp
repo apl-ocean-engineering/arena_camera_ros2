@@ -100,6 +100,14 @@ void ArenaCameraStreamingNodelet::imageCallback(Arena::IImage *pImage) {
 
     const unsigned int data_size = img_raw_msg_.height * img_raw_msg_.step;
 
+    // NODELET_INFO_STREAM("Image size " << pImage->GetWidth() << " x " <<
+    // pImage->GetHeight() << " with " << pImage->GetBitsPerPixel() << " bits");
+    // NODELET_INFO_STREAM("  expected size "
+    //                     << (pImage->GetWidth() * pImage->GetHeight() *
+    //                         (pImage->GetBitsPerPixel() / 8))
+    //                     << " ; Image size " << data_size << " ; size filled "
+    //                     << pImage->GetSizeFilled());
+
     // \todo{amarburg} Validate image by comparing calculated image
     //  size to actual Buffer/Image payload size
     img_raw_msg_.data.resize(data_size);
