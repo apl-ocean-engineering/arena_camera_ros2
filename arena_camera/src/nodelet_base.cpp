@@ -594,6 +594,36 @@ bool ArenaCameraNodeletBase::setImageEncoding(const std::string &ros_encoding) {
                          << "' occurred: " << e.GetDescription());
     return false;
   }
+
+  NODELET_INFO("Have configured image_encoding");
+
+  if (arena_camera::encoding_conversions::isHDR(ros_encoding)) {
+    NODELET_INFO_STREAM("Requested HDR encoding \""
+                        << ros_encoding << "\", enabling HDR mode in camera");
+
+    try {
+      auto pNodeMap = pDevice_->GetNodeMap();
+
+      // GenApi::CStringPtr pHDROutput = pNodeMap->GetNode("HDROutput");
+      // if (GenApi::IsWritable(pHDROutput)) {
+      //   Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "HDROutput",
+      //   "HDR");
+      // }
+
+      // Enable HDR image enhancement
+      Arena::SetNodeValue<bool>(pNodeMap, "HDRImageEnhancementEnable", true);
+      Arena::SetNodeValue<bool>(pNodeMap, "HDRTuningEnable", false);
+
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "HDROutput", "HDR");
+
+    } catch (GenICam::GenericException &e) {
+      NODELET_ERROR_STREAM("Error while configuring camera: "
+                           << e.GetDescription()
+                           << ", is this camera capable of HDR?");
+      return false;
+    }
+  }
+
   return true;
 }
 

@@ -164,5 +164,12 @@ bool genAPI2Ros(const std::string& gen_api_enc, std::string& ros_enc) {
   }
   return true;
 }
+
+bool isHDR(const std::string& ros_enc) {
+  return ((ros_enc == arena_camera::image_encodings::BAYER_RGGB24) ||
+          (ros_enc == arena_camera::image_encodings::RGB24) ||
+          (ros_enc == arena_camera::image_encodings::BGR24));
+}
+
 }  // namespace encoding_conversions
 }  // namespace arena_camera

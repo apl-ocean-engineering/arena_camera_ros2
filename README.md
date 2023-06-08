@@ -1,6 +1,6 @@
 ## Arena Camera Driver for ROS1
 
-This repo contains a ROS1 driver for Lucidvision machine vision camera using their ["Arena" SDK for Ubuntu](https://thinklucid.com/downloads-hub/).  It contains a "standard" driver as well as a driver tuned for the HDR modes provided by the Triton [TRI054-S](https://thinklucid.com/product/triton-5-mp-imx490/) based on the Sony IMX490 high-dynamic-range sensor.
+This repo contains a ROS1 driver for Lucidvision machine vision camera using their ["Arena" SDK for Ubuntu](https://thinklucid.com/downloads-hub/).
 
 This particular version is forked from the upstream [Arena Camera Driver](https://github.com/lucidvisionlabs/arena_camera_ros) from LucidVision and contains some refactoring for functionality / readability and the IMX490-specific HDR driver.
 # Getting Started
@@ -12,7 +12,7 @@ This package builds in the same way as other `catkin` ROS packages, however the 
 
 # ROS Packages
 
-This repo contains three ROS packages.  See the individual READMEs for each for details.
+This repo contains two ROS packages.  See the individual READMEs for each for details.
 
 ## camera_control_msgs
 
@@ -22,11 +22,6 @@ Contains actions and service calls for adjusting camera settings (gain, etc).
 
 A "generic" ROS node for Lucid cameras.  See the [README](arena_camera/README) in this package for more details.
 
-## arena_imx490
-
-This ROS node is a built on a `arena_camera` that is specifically designed for the HDR modes of the IMX490-based Lucid cameras.
-
-In practice it is a lightweight wrapper around code from `arena_camera` that enables the HDR imaging modes on the camera.
 # License
 
 This code is forked from the [Lucid Vision's ROS node](https://github.com/lucidvisionlabs/arena_camera_ros), which in turn is forked from [Basler's ROS node for their Pylon library](https://github.com/magazino/pylon_camera), which is released under the [BSD 3-Clause License](LICENSE).

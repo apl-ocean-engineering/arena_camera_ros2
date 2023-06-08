@@ -50,6 +50,8 @@ bool ros2GenAPI(const std::string& ros_enc, std::string& gen_api_enc);
  */
 bool genAPI2Ros(const std::string& gen_api_enc, std::string& ros_enc);
 
+bool isHDR(const std::string& ros_enc);
+
 }  // namespace encoding_conversions
 
 }  // namespace arena_camera
