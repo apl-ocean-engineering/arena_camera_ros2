@@ -68,6 +68,8 @@
 // Auto-generated dynamic_reconfigure header file
 #include <arena_camera/ArenaCameraConfig.h>
 
+#include "imaging_msgs/ImagingMetadata.h"
+
 namespace arena_camera {
 typedef actionlib::SimpleActionServer<camera_control_msgs::GrabImagesAction>
     GrabImagesAS;
@@ -121,8 +123,11 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
 
   void updateFrameRate();
 
+  // Update exposure based on arena_camera_parameter_set
   void updateExposure();
+
   void updateGain();
+
   void updateGamma();
 
   /**
@@ -169,25 +174,6 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    */
   bool setROICallback(camera_control_msgs::SetROI::Request &req,
                       camera_control_msgs::SetROI::Response &res);
-
-  bool setExposureValue(const float &target_exposure, float &reached_exposure);
-
-  /**
-   * Update the exposure value on the camera
-   * @param target_exposure the targeted exposure
-   * @param reached_exposure the exposure that could be reached
-   * @return true if the targeted exposure could be reached
-   */
-  bool setExposure(const float &target_exposure, float &reached_exposure);
-
-  /**
-   * Service callback for setting the exposure
-   * @param req request
-   * @param res response
-   * @return true on success
-   */
-  bool setExposureCallback(camera_control_msgs::SetExposure::Request &req,
-                           camera_control_msgs::SetExposure::Response &res);
 
   /**
    * Sets the target brightness which is the intensity-mean over all pixels.
@@ -331,13 +317,14 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
                         size_t &reached_binning_y);
   void disableAllRunningAutoBrightessFunctions();
 
+  ros::Publisher metadata_pub_;
+
   ArenaCameraParameter arena_camera_parameter_set_;
   ros::ServiceServer set_binning_srv_;
   ros::ServiceServer set_roi_srv_;
-  ros::ServiceServer set_exposure_srv_;
   ros::ServiceServer set_gain_srv_;
   ros::ServiceServer set_gamma_srv_;
-  ros::ServiceServer set_brightness_srv_;
+
   std::vector<ros::ServiceServer> set_user_output_srvs_;
 
   std::unique_ptr<image_transport::ImageTransport> it_;
@@ -383,16 +370,7 @@ class ArenaCameraStreamingNodelet : public ArenaCameraNodeletBase {
   ArenaCameraStreamingNodelet();
   virtual ~ArenaCameraStreamingNodelet();
 
-  /**
-   * initialize the camera and the ros node.
-   * calls ros::shutdown if an error occurs.
-   */
   virtual void onInit();
-
-  /**
-   * Take one image
-   */
-  // void timerCallback(const ros::TimerEvent&);
 
  protected:
   // ros::Timer image_timer_;
@@ -416,6 +394,8 @@ class ArenaCameraStreamingNodelet : public ArenaCameraNodeletBase {
   } image_callback_obj_;
 
   void imageCallback(Arena::IImage *pImage);
+
+  void reconfigureCallback(ArenaCameraConfig &config, uint32_t level) override;
 };
 
 class ArenaCameraPolledNodelet : public ArenaCameraNodeletBase {

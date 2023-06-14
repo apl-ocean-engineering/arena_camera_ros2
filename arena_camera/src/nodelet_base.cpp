@@ -86,18 +86,17 @@ void ArenaCameraNodeletBase::onInit() {
   ros::NodeHandle nh = getNodeHandle();
   ros::NodeHandle pnh = getPrivateNodeHandle();
 
+  metadata_pub_ =
+      nh.advertise<imaging_msgs::ImagingMetadata>("imaging_metadata", 1);
+
   set_binning_srv_ = nh.advertiseService(
       "set_binning", &ArenaCameraNodeletBase::setBinningCallback, this);
   set_roi_srv_ = nh.advertiseService(
       "set_roi", &ArenaCameraNodeletBase::setROICallback, this);
-  set_exposure_srv_ = nh.advertiseService(
-      "set_exposure", &ArenaCameraNodeletBase::setExposureCallback, this);
   set_gain_srv_ = nh.advertiseService(
       "set_gain", &ArenaCameraNodeletBase::setGainCallback, this);
   set_gamma_srv_ = nh.advertiseService(
       "set_gamma", &ArenaCameraNodeletBase::setGammaCallback, this);
-  set_brightness_srv_ = nh.advertiseService(
-      "set_brightness", &ArenaCameraNodeletBase::setBrightnessCallback, this);
 
   it_.reset(new image_transport::ImageTransport(nh));
   img_raw_pub_ = it_->advertiseCamera("image_raw", 1);
@@ -310,7 +309,7 @@ bool ArenaCameraNodeletBase::configureCamera() {
     //
     // EXPOSURE AUTO & EXPOSURE
     //
-    updateExposure();
+    // updateExposure();
 
     //
     // GAIN
@@ -526,19 +525,6 @@ float ArenaCameraNodeletBase::currentGain() {
   } else {
     float gainValue = pGain->GetValue();
     return gainValue;
-  }
-}
-
-float ArenaCameraNodeletBase::currentExposure() {
-  GenApi::CFloatPtr pExposureTime =
-      pDevice_->GetNodeMap()->GetNode("ExposureTime");
-
-  if (!pExposureTime || !GenApi::IsReadable(pExposureTime)) {
-    NODELET_WARN_STREAM("No exposure time value, returning -1");
-    return -1.;
-  } else {
-    float exposureValue = pExposureTime->GetValue();
-    return exposureValue;
   }
 }
 
@@ -980,6 +966,19 @@ bool ArenaCameraNodeletBase::setROICallback(
 
 //~~ Exposure ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+float ArenaCameraNodeletBase::currentExposure() {
+  GenApi::CFloatPtr pExposureTime =
+      pDevice_->GetNodeMap()->GetNode("ExposureTime");
+
+  if (!pExposureTime || !GenApi::IsReadable(pExposureTime)) {
+    NODELET_WARN_STREAM("No exposure time value, returning -1");
+    return -1.;
+  } else {
+    float exposureValue = pExposureTime->GetValue();
+    return exposureValue;
+  }
+}
+
 void ArenaCameraNodeletBase::updateExposure() {
   auto pNodeMap = pDevice_->GetNodeMap();
   // exposure_auto_ will be already set to false if exposure_given_ is true
@@ -987,36 +986,51 @@ void ArenaCameraNodeletBase::updateExposure() {
   if (arena_camera_parameter_set_.exposure_auto_) {
     Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
                                            "Continuous");
+
+    if (arena_camera_parameter_set_.auto_exposure_max_ms_ > 0) {
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAutoLimitAuto",
+                                             "Off");
+      GenApi::CFloatPtr pExposureUpperLimit =
+          pDevice_->GetNodeMap()->GetNode("ExposureAutoUpperLimit");
+      if (GenApi::IsWritable(pExposureUpperLimit)) {
+        // The parameter in the camera is in us
+        pExposureUpperLimit->SetValue(
+            static_cast<int64_t>(
+                arena_camera_parameter_set_.auto_exposure_max_ms_) *
+            1000);
+      } else {
+        NODELET_INFO("ExposureAutoUpperLimit is not writeable");
+      }
+
+    } else {
+      // Use automatic auto-exposure limits
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAutoLimitAuto",
+                                             "Continuous");
+    }
+
+    NODELET_INFO_STREAM(
+        "Enabling autoexposure with limits "
+        << Arena::GetNodeValue<double>(pNodeMap, "ExposureAutoLowerLimit")
+        << " to "
+        << Arena::GetNodeValue<double>(pNodeMap, "ExposureAutoUpperLimit"));
+
+    // Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAutoLimitAuto",
+    //                                        "Continuous");
+
+    // Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
+    //                                        "Continuous");
+
     // todo update parameter on the server
     NODELET_INFO_STREAM("Settings Exposure to auto/Continuous");
   } else {
     Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto", "Off");
     // todo update parameter on the server
     NODELET_INFO_STREAM("Settings Exposure to off/false");
-  }
-
-  if (arena_camera_parameter_set_.exposure_given_) {
-    float reached_exposure;
-    if (setExposure(arena_camera_parameter_set_.exposure_, reached_exposure)) {
-      // Note: ont update the ros param because it might keep
-      // decreasing or incresing overtime when rerun
-      NODELET_INFO_STREAM("Setting exposure to "
-                          << arena_camera_parameter_set_.exposure_
-                          << ", reached: " << reached_exposure);
-    }
-  }
-}
-
-bool ArenaCameraNodeletBase::setExposureValue(const float &target_exposure,
-                                              float &reached_exposure) {
-  try {
-    Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(),
-                                           "ExposureAuto", "Off");
 
     GenApi::CFloatPtr pExposureTime =
         pDevice_->GetNodeMap()->GetNode("ExposureTime");
 
-    float exposure_to_set = target_exposure;
+    float exposure_to_set = arena_camera_parameter_set_.exposure_ms_ * 1000;
     if (exposure_to_set < pExposureTime->GetMin()) {
       NODELET_WARN_STREAM("Desired exposure ("
                           << exposure_to_set << ") "
@@ -1032,64 +1046,7 @@ bool ArenaCameraNodeletBase::setExposureValue(const float &target_exposure,
     }
 
     pExposureTime->SetValue(exposure_to_set);
-    reached_exposure = pExposureTime->GetValue();
-
-    // if ( std::fabs(reached_exposure - exposure_to_set) > exposureStep() )
-    // {
-    //     // no success if the delta between target and reached exposure
-    //     // is greater then the exposure step in ms
-    //     return false;
-    // }
-  } catch (const GenICam::GenericException &e) {
-    NODELET_ERROR_STREAM("An exception while setting target exposure to "
-                         << target_exposure
-                         << " occurred:" << e.GetDescription());
-    return false;
   }
-  return true;
-}
-
-bool ArenaCameraNodeletBase::setExposure(const float &target_exposure,
-                                         float &reached_exposure) {
-  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
-  // if ( !pylon_camera_->isReady() )
-  // {
-  //     NODELET_WARN("Error in setExposure(): pylon_camera_ is not
-  //     ready!"); return false;
-  // }
-
-  if (ArenaCameraNodeletBase::setExposureValue(target_exposure,
-                                               reached_exposure)) {
-    // success if the delta is smaller then the exposure step
-    return true;
-  } else  // retry till timeout
-  {
-    // wait for max 5s till the cam has updated the exposure
-    ros::Rate r(10.0);
-    ros::Time timeout(ros::Time::now() + ros::Duration(5.0));
-    while (ros::ok()) {
-      if (ArenaCameraNodeletBase::setExposureValue(target_exposure,
-                                                   reached_exposure)) {
-        // success if the delta is smaller then the exposure step
-        return true;
-      }
-
-      if (ros::Time::now() > timeout) {
-        break;
-      }
-      r.sleep();
-    }
-    NODELET_ERROR_STREAM("Error in setExposure(): Unable to set target"
-                         << " exposure before timeout");
-    return false;
-  }
-}
-
-bool ArenaCameraNodeletBase::setExposureCallback(
-    camera_control_msgs::SetExposure::Request &req,
-    camera_control_msgs::SetExposure::Response &res) {
-  res.success = setExposure(req.target_exposure, res.reached_exposure);
-  return true;
 }
 
 //~~ Gain ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1300,218 +1257,6 @@ bool ArenaCameraNodeletBase::setGammaCallback(
   return true;
 }
 
-bool ArenaCameraNodeletBase::setBrightness(const int &target_brightness,
-                                           int &reached_brightness,
-                                           const bool &exposure_auto,
-                                           const bool &gain_auto) {
-  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
-  ros::Time begin =
-      ros::Time::now();  // time measurement for the exposure search
-
-  // brightness service can only work, if an image has already been grabbed,
-  // because it calculates the mean on the current image. The interface is
-  // ready if the grab-result-pointer of the first acquisition contains
-  // valid data
-  int target_brightness_co = std::min(255, target_brightness);
-  // smart brightness search initially sets the last rememberd exposure time
-  if (brightness_exp_lut_.at(target_brightness_co) != 0.0) {
-    float reached_exp;
-    if (!setExposure(brightness_exp_lut_.at(target_brightness_co),
-                     reached_exp)) {
-      NODELET_WARN_STREAM("Tried to speed-up exposure search with initial"
-                          << " guess, but setting the exposure failed!");
-    } else {
-      NODELET_DEBUG_STREAM("Speed-up exposure search with initial exposure"
-                           << " guess of " << reached_exp);
-    }
-  }
-
-  // get actual image -> fills img_raw_msg_.data vector
-  // if (!grabImage()) {
-  //   NODELET_ERROR("Failed to grab image, can't calculate current
-  //   brightness!"); return false;
-  // }
-
-  // calculates current brightness by generating the mean over all pixels
-  // stored in img_raw_msg_.data vector
-  float current_brightness = calcCurrentBrightness();
-
-  NODELET_DEBUG_STREAM("New brightness request for target brightness "
-                       << target_brightness_co
-                       << ", current brightness = " << current_brightness);
-
-  if (std::fabs(current_brightness -
-                static_cast<float>(target_brightness_co)) <= 1.0) {
-    reached_brightness = static_cast<int>(current_brightness);
-    ros::Time end = ros::Time::now();
-    NODELET_DEBUG_STREAM(
-        "Brightness reached without exposure search, duration: "
-        << (end - begin).toSec());
-    return true;  // target brightness already reached
-  }
-
-  // initially cancel all running exposure search by deactivating
-  // ExposureAuto & AutoGain
-  disableAllRunningAutoBrightessFunctions();
-
-  if (target_brightness_co <= 50) {
-    // own binary-exp search: we need to have the upper bound -> ArenaAuto
-    // exposure to a initial start value of 50 provides it
-    if (brightness_exp_lut_.at(50) != 0.0) {
-      float reached_exp;
-      if (!setExposure(brightness_exp_lut_.at(50), reached_exp)) {
-        NODELET_WARN_STREAM("Tried to speed-up exposure search with initial"
-                            << " guess, but setting the exposure failed!");
-      } else {
-        NODELET_DEBUG_STREAM("Speed-up exposure search with initial exposure"
-                             << " guess of " << reached_exp);
-      }
-    }
-  }
-
-  if (!exposure_auto && !gain_auto) {
-    NODELET_WARN_STREAM(
-        "Neither Auto Exposure Time ('exposure_auto') nor Auto "
-        << "Gain ('gain_auto') are enabled! Hence gain and exposure time "
-        << "are assumed to be fix and the target brightness ("
-        << target_brightness_co << ") can not be reached!");
-    return false;
-  }
-
-  bool is_brightness_reached = false;
-  size_t fail_safe_ctr = 0;
-  size_t fail_safe_ctr_limit = 10;
-
-  float last_brightness = std::numeric_limits<float>::max();
-
-  // timeout for the exposure search -> need more time for great exposure
-  // values
-  ros::Time start_time = ros::Time::now();
-  ros::Time timeout = start_time;
-  if (target_brightness_co < 205) {
-    timeout +=
-        ros::Duration(arena_camera_parameter_set_.exposure_search_timeout_);
-  } else {
-    timeout += ros::Duration(
-        10.0 + arena_camera_parameter_set_.exposure_search_timeout_);
-  }
-
-  while (ros::ok()) {
-    // calling setBrightness in every cycle would not be necessary for the
-    // arena auto brightness search. But for the case that the target
-    // brightness is out of the arena range which is from [50 - 205] a
-    // binary exposure search will be executed where we have to update the
-    // search parameter in every cycle if (
-    // !arena_camera_->setBrightness(target_brightness_co,
-    //                                    current_brightness,
-    //                                    exposure_auto,
-    //                                    gain_auto) )
-    // {
-    //         disableAllRunningAutoBrightessFunctions();
-    //         break;
-    // }
-
-    // if (!grabImage()) {
-    //   return false;
-    // }
-
-    // if ( arena_camera_->isArenaAutoBrightnessFunctionRunning() )
-    // {
-    //         // do nothing if the arena auto function is running, we need
-    //         to
-    //         // wait till it's finished
-    //         /*
-    //            NODELET_DEBUG_STREAM("ArenaAutoBrightnessFunction still
-    //            running! "
-    //             << " Current brightness: " << calcCurrentBrightness()
-    //             << ", current exposure: " << currentExposure());
-    //          */
-    //         continue;
-    // }
-
-    current_brightness = calcCurrentBrightness();
-    // is_brightness_reached = fabs(current_brightness -
-    // static_cast<float>(target_brightness_co))
-    //                         < arena_camera_->maxBrightnessTolerance();
-    //
-    // if ( is_brightness_reached )
-    // {
-    //         disableAllRunningAutoBrightessFunctions();
-    //         break;
-    // }
-
-    if (std::fabs(last_brightness - current_brightness) <= 1.0) {
-      fail_safe_ctr++;
-    } else {
-      fail_safe_ctr = 0;
-    }
-
-    last_brightness = current_brightness;
-
-    if ((fail_safe_ctr > fail_safe_ctr_limit) && !is_brightness_reached) {
-      NODELET_WARN_STREAM("Seems like the desired brightness ("
-                          << target_brightness_co
-                          << ") is not reachable! Stuck at brightness "
-                          << current_brightness << " and exposure "
-                          << currentExposure() << "us");
-      disableAllRunningAutoBrightessFunctions();
-      reached_brightness = static_cast<int>(current_brightness);
-      return false;
-    }
-
-    if (ros::Time::now() > timeout) {
-      // cancel all running brightness search by deactivating ExposureAuto
-      disableAllRunningAutoBrightessFunctions();
-      NODELET_WARN_STREAM("Did not reach the target brightness before "
-                          << "timeout of " << (timeout - start_time).sec
-                          << " sec! Stuck at brightness " << current_brightness
-                          << " and exposure " << currentExposure() << "us");
-      reached_brightness = static_cast<int>(current_brightness);
-      return false;
-    }
-  }
-
-  NODELET_DEBUG_STREAM("Finally reached brightness: " << current_brightness);
-  reached_brightness = static_cast<int>(current_brightness);
-
-  // store reached brightness - exposure tuple for next times search
-  if (is_brightness_reached) {
-    if (brightness_exp_lut_.at(reached_brightness) == 0.0) {
-      brightness_exp_lut_.at(reached_brightness) = currentExposure();
-    } else {
-      brightness_exp_lut_.at(reached_brightness) += currentExposure();
-      brightness_exp_lut_.at(reached_brightness) *= 0.5;
-    }
-    if (brightness_exp_lut_.at(target_brightness_co) == 0.0) {
-      brightness_exp_lut_.at(target_brightness_co) = currentExposure();
-    } else {
-      brightness_exp_lut_.at(target_brightness_co) += currentExposure();
-      brightness_exp_lut_.at(target_brightness_co) *= 0.5;
-    }
-  }
-  ros::Time end = ros::Time::now();
-  NODELET_DEBUG_STREAM("Brightness search duration: " << (end - begin).toSec());
-  return is_brightness_reached;
-}
-
-bool ArenaCameraNodeletBase::setBrightnessCallback(
-    camera_control_msgs::SetBrightness::Request &req,
-    camera_control_msgs::SetBrightness::Response &res) {
-  res.success = setBrightness(req.target_brightness, res.reached_brightness,
-                              req.exposure_auto, req.gain_auto);
-  if (req.brightness_continuous) {
-    if (req.exposure_auto) {
-      //  arena_camera_->enableContinuousAutoExposure();
-    }
-    if (req.gain_auto) {
-      //    arena_camera_->enableContinuousAutoGain();
-    }
-  }
-  res.reached_exposure_time = currentExposure();
-  res.reached_gain_value = currentGain();
-  return true;
-}
-
 void ArenaCameraNodeletBase::setupSamplingIndices(
     std::vector<std::size_t> &indices, std::size_t rows, std::size_t cols,
     int downsampling_factor) {
@@ -1604,6 +1349,16 @@ void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
 
     NODELET_INFO_STREAM("Updating frame rate to " << frameRate() << " fps");
     updateFrameRate();
+  }
+
+  if ((config.auto_exposure != previous_config_.auto_exposure) ||
+      (config.auto_exposure_max_ms != previous_config_.auto_exposure_max_ms) ||
+      (config.exposure_ms != previous_config_.exposure_ms)) {
+    arena_camera_parameter_set_.exposure_auto_ = config.auto_exposure;
+    arena_camera_parameter_set_.exposure_ms_ = config.exposure_ms;
+    arena_camera_parameter_set_.auto_exposure_max_ms_ =
+        config.auto_exposure_max_ms;
+    updateExposure();
   }
 
   // Save config

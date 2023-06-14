@@ -33,6 +33,7 @@ set(CATKIN_COMPONENTS
      roslaunch
      sensor_msgs
      nodelet
+     imaging_msgs
 )
 
 find_package(

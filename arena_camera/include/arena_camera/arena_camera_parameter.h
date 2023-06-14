@@ -139,17 +139,6 @@ class ArenaCameraParameter {
   // #######################################################################
 
   /**
-   * The exposure time in microseconds to be set after opening the camera.
-   */
-  double exposure_;
-
-  /**
-   * Flag which indicates if the exposure time is provided and hence should
-   * be set during startup
-   */
-  bool exposure_given_;
-
-  /**
    * The target gain in percent of the maximal value the camera supports
    * For USB-Cameras, the gain is in dB, for GigE-Cameras it is given in so
    * called 'device specific units'.
@@ -222,18 +211,8 @@ class ArenaCameraParameter {
   bool gain_auto_;
   // #######################################################################
 
-  /**
-   * The timeout while searching the exposure which is connected to the
-   * desired brightness. For slow system this has to be increased.
-   */
-  double exposure_search_timeout_;
-
-  /**
-   * The exposure search can be limited with an upper bound. This is to
-   * prevent very high exposure times and resulting timeouts.
-   * A typical value for this upper bound is ~2000000us.
-   */
-  double auto_exp_upper_lim_;
+  double exposure_ms_;
+  double auto_exposure_max_ms_;
 
   /**
    * The MTU size. Only used for GigE cameras.

@@ -178,14 +178,14 @@ camera_control_msgs::GrabImagesResult ArenaCameraPolledNodelet::grabImagesRaw(
   std::cout << *goal << std::endl;
 #endif
 
-  if (goal->exposure_given && goal->exposure_times.empty()) {
-    NODELET_ERROR_STREAM(
-        "GrabImagesRaw action server received request and "
-        << "'exposure_given' is true, but the 'exposure_times' vector is "
-        << "empty! Not enough information to execute acquisition!");
-    result.success = false;
-    return result;
-  }
+  // if (goal->exposure_given && goal->exposure_times.empty()) {
+  //   NODELET_ERROR_STREAM(
+  //       "GrabImagesRaw action server received request and "
+  //       << "'exposure_given' is true, but the 'exposure_times' vector is "
+  //       << "empty! Not enough information to execute acquisition!");
+  //   result.success = false;
+  //   return result;
+  // }
 
   if (goal->gain_given && goal->gain_values.empty()) {
     NODELET_ERROR_STREAM(
@@ -298,8 +298,8 @@ camera_control_msgs::GrabImagesResult ArenaCameraPolledNodelet::grabImagesRaw(
 
   for (std::size_t i = 0; i < n_images; ++i) {
     if (goal->exposure_given) {
-      result.success = setExposure(goal->exposure_times[i],
-                                   result.reached_exposure_times[i]);
+      // result.success = setExposure(goal->exposure_times[i],
+      //                              result.reached_exposure_times[i]);
     }
     if (goal->gain_given) {
       result.success =
@@ -353,7 +353,7 @@ camera_control_msgs::GrabImagesResult ArenaCameraPolledNodelet::grabImagesRaw(
   // restore previous settings:
   float reached_val;
   if (goal->exposure_given) {
-    setExposure(previous_exp, reached_val);
+    // setExposure(previous_exp, reached_val);
   }
   if (goal->gain_given) {
     setGain(previous_gain, reached_val);
@@ -363,7 +363,7 @@ camera_control_msgs::GrabImagesResult ArenaCameraPolledNodelet::grabImagesRaw(
   }
   if (goal->brightness_given) {
     setGain(previous_gain, reached_val);
-    setExposure(previous_exp, reached_val);
+    // setExposure(previous_exp, reached_val);
   }
   return result;
 }

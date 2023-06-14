@@ -123,6 +123,23 @@ void ArenaCameraStreamingNodelet::imageCallback(Arena::IImage *pImage) {
       img_raw_pub_.publish(img_raw_msg_, cam_info);
     }
   }
+
+  imaging_msgs::ImagingMetadata meta_msg;
+  meta_msg.header = img_raw_msg_.header;
+
+  meta_msg.exposure_us = currentExposure();
+  meta_msg.gain = currentGain();
+
+  metadata_pub_.publish(meta_msg);
+}
+
+void ArenaCameraStreamingNodelet::reconfigureCallback(ArenaCameraConfig &config,
+                                                      uint32_t level) {
+  stopStreaming();
+
+  ArenaCameraNodeletBase::reconfigureCallback(config, level);
+
+  startStreaming();
 }
 
 }  // namespace arena_camera
