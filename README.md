@@ -2,7 +2,7 @@
 
 This repo contains a ROS1 driver for Lucidvision machine vision camera using their ["Arena" SDK for Ubuntu](https://thinklucid.com/downloads-hub/).
 
-This particular version is forked from the upstream [Arena Camera Driver](https://github.com/lucidvisionlabs/arena_camera_ros) from LucidVision and contains some refactoring for functionality / readability and the IMX490-specific HDR driver.
+This particular version is forked from the upstream [Arena Camera Driver](https://github.com/lucidvisionlabs/arena_camera_ros) from LucidVision and contains significant refactoring for functionality / readability.
 # Getting Started
 
 See the full instructions at Lucid:  https://support.thinklucid.com/using-ros-for-linux/
