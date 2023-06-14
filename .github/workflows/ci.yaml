@@ -10,7 +10,7 @@ on: # this determines when this workflow is run
      branches: [ master ]
   # schedule: # uncomment to run periodically
   #  - cron: '0 4 * * *' # every day at 4 AM (UTC)
-  #workflow_dispatch: # allow manually starting this workflow
+  workflow_dispatch: # allow manually starting this workflow
 
 jobs:
   industrial_ci:
@@ -18,11 +18,9 @@ jobs:
     runs-on: registry.gitlab.com/amarburg/arena_camera_ros_docker:base-latest
     strategy:
       # fail-fast: false # uncomment if failing jobs should not cancel the others immediately
-      matrix: # matrix is the product of entries
+      matrix:
         ROS_DISTRO: [noetic]
         ROS_REPO: [main]
-        # exclude: # specific configuration can be excludes
-        #   - {ROS_DISTRO: melodic, ROS_REPO: testing}
     #env:
     #  CCACHE_DIR: "${{ github.workspace }}/.ccache" # directory for ccache (and how we enable ccache in industrial_ci)
     steps:
