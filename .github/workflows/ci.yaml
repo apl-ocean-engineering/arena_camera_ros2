@@ -15,7 +15,7 @@ on: # this determines when this workflow is run
 jobs:
   industrial_ci:
     name: ROS ${{ matrix.ROS_DISTRO }} (${{ matrix.ROS_REPO }})
-    runs-on: ubuntu-latest
+    runs-on: registry.gitlab.com/amarburg/arena_camera_ros_docker:base-latest
     strategy:
       # fail-fast: false # uncomment if failing jobs should not cancel the others immediately
       matrix: # matrix is the product of entries
@@ -40,5 +40,4 @@ jobs:
         env: # either pass all entries explicitly
           ROS_DISTRO: ${{ matrix.ROS_DISTRO }}
           ROS_REPO: ${{ matrix.ROS_REPO }}
-        # with: # or pass the full matrix as config
-        #    config: ${{toJSON(matrix)}}
+          UPSTREAM_WORKSPACE: github:apl-ocean-engineering/imaging_msgs
