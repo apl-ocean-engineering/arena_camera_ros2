@@ -291,6 +291,10 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
                     camera_control_msgs::SetBool::Request &req,
                     camera_control_msgs::SetBool::Response &res);
 
+  /*
+   */
+  void enableLUT(bool enable);
+
  protected:
   /// @brief
   /// @param cam_info_msg

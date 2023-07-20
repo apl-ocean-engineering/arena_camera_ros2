@@ -83,8 +83,8 @@ ArenaCameraNodeletBase::~ArenaCameraNodeletBase() {
 // Nodelet::onInit() function
 
 void ArenaCameraNodeletBase::onInit() {
-  ros::NodeHandle nh = getNodeHandle();
-  ros::NodeHandle pnh = getPrivateNodeHandle();
+  ros::NodeHandle &nh = getNodeHandle();
+  ros::NodeHandle &pnh = getPrivateNodeHandle();
 
   metadata_pub_ =
       nh.advertise<imaging_msgs::ImagingMetadata>("imaging_metadata", 1);
@@ -261,17 +261,17 @@ bool ArenaCameraNodeletBase::configureCamera() {
 
     if (Arena::GetNodeValue<GenICam::gcstring>(
             pDevice_->GetNodeMap(), "DeviceTLType") == "GigEVision") {
-      NODELET_INFO("GigE device, performing GigE specific configuration");
+      NODELET_INFO("GigE device, performing GigE specific configuration:");
 
       // Set Jumbo frames (this is only relevant for GigE cameras.)
       auto pPacketSize = pNodeMap->GetNode("DeviceStreamChannelPacketSize");
       if (GenApi::IsWritable(pPacketSize)) {
-        NODELET_INFO_STREAM("Setting MTU to "
+        NODELET_INFO_STREAM(" -> Setting MTU to "
                             << arena_camera_parameter_set_.mtuSize());
         Arena::SetNodeValue<int64_t>(pNodeMap, "DeviceStreamChannelPacketSize",
                                      arena_camera_parameter_set_.mtuSize());
       } else {
-        NODELET_INFO("Camera MTU is not writeable");
+        NODELET_INFO(" -> Camera MTU is not writeable");
       }
     }
 
@@ -279,10 +279,12 @@ bool ArenaCameraNodeletBase::configureCamera() {
     NODELET_INFO_STREAM("Expected payload size: " << payloadSize);
 
     // enable stream auto negotiate packet size
+    NODELET_DEBUG("Enabling auto-negotiation of packet size");
     Arena::SetNodeValue<bool>(pDevice_->GetTLStreamNodeMap(),
                               "StreamAutoNegotiatePacketSize", true);
 
     // enable stream packet resend
+    NODELET_DEBUG("Enabling packet resend");
     Arena::SetNodeValue<bool>(pDevice_->GetTLStreamNodeMap(),
                               "StreamPacketResendEnable", true);
 
@@ -301,25 +303,19 @@ bool ArenaCameraNodeletBase::configureCamera() {
                                              "Software");
     }
 
-    //
-    // FRAMERATE
-    //
-    // updateFrameRate();
-
-    //
-    // EXPOSURE AUTO & EXPOSURE
-    //
-    // updateExposure();
-
-    //
-    // GAIN
-    //
-    updateGain();
+    // Parameters controlled by param / dynamic reonfigure are not set here
+    // Assume there will be an immediate call from dynamic reconfigure
 
     //
     // GAMMA
     //
     updateGamma();
+
+    // LUT
+    NODELET_INFO_STREAM(
+        (arena_camera_parameter_set_.enable_lut_ ? "Enabling" : "Disabling")
+        << " camera LUT");
+    enableLUT(arena_camera_parameter_set_.enable_lut_);
 
     // ------------------------------------------------------------------------
 
@@ -437,16 +433,16 @@ bool ArenaCameraNodeletBase::configureCamera() {
                         << "] name not valid for camera_info_manager");
   }
 
-  NODELET_INFO("=== Startup settings ===");
-  NODELET_INFO_STREAM("encoding = " << currentROSEncoding());
-  NODELET_INFO_STREAM("binning = [" << currentBinningX() << " x "
-                                    << currentBinningY() << "]");
-  NODELET_INFO_STREAM("exposure = " << currentExposure() << " us");
-  NODELET_INFO_STREAM("gain = " << currentGain());
-  NODELET_INFO_STREAM("gamma = " << currentGamma());
-  NODELET_INFO_STREAM(
-      "shutter mode = " << arena_camera_parameter_set_.shutterModeString());
-  NODELET_INFO("========================");
+  // NODELET_INFO("=== Startup settings ===");
+  // NODELET_INFO_STREAM("encoding = " << currentROSEncoding());
+  // NODELET_INFO_STREAM("binning = [" << currentBinningX() << " x "
+  //                                   << currentBinningY() << "]");
+  // NODELET_INFO_STREAM("exposure = " << currentExposure() << " us");
+  // NODELET_INFO_STREAM("gain = " << currentGain());
+  // NODELET_INFO_STREAM("gamma = " << currentGamma());
+  // NODELET_INFO_STREAM(
+  //     "shutter mode = " << arena_camera_parameter_set_.shutterModeString());
+  // NODELET_INFO("========================");
 
   // pDevice_->RequeueBuffer(pImage_);
   return true;
@@ -1020,12 +1016,9 @@ void ArenaCameraNodeletBase::updateExposure() {
     // Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
     //                                        "Continuous");
 
-    // todo update parameter on the server
-    NODELET_INFO_STREAM("Settings Exposure to auto/Continuous");
+    NODELET_INFO_STREAM("Setting auto-exposure to _on_ / Continuous");
   } else {
     Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto", "Off");
-    // todo update parameter on the server
-    NODELET_INFO_STREAM("Settings Exposure to off/false");
 
     GenApi::CFloatPtr pExposureTime =
         pDevice_->GetNodeMap()->GetNode("ExposureTime");
@@ -1046,6 +1039,9 @@ void ArenaCameraNodeletBase::updateExposure() {
     }
 
     pExposureTime->SetValue(exposure_to_set);
+
+    NODELET_INFO_STREAM("Setting auto-exposure _off_ with exposure of "
+                        << pExposureTime->GetValue() << " ms");
   }
 }
 
@@ -1058,11 +1054,11 @@ void ArenaCameraNodeletBase::updateGain() {
   if (arena_camera_parameter_set_.gain_auto_) {
     Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Continuous");
     // todo update parameter on the server
-    NODELET_INFO_STREAM("Settings Gain to auto/Continuous");
+    NODELET_INFO_STREAM("Setting auto-gain to _on_ / Continuous");
   } else {
     Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Off");
     // todo update parameter on the server
-    NODELET_INFO_STREAM("Settings Gain to off/false");
+    NODELET_INFO_STREAM("Setting auto-gain to _off_");
   }
 
   if (arena_camera_parameter_set_.gain_given_) {
@@ -1155,9 +1151,10 @@ bool ArenaCameraNodeletBase::setGainCallback(
 void ArenaCameraNodeletBase::disableAllRunningAutoBrightessFunctions() {
   GenApi::CStringPtr pExposureAuto = pNodeMap_->GetNode("ExposureAuto");
   GenApi::CStringPtr pGainAuto = pNodeMap_->GetNode("GainAuto");
+
   if (!pExposureAuto || !GenApi::IsWritable(pExposureAuto) || !pGainAuto ||
       !GenApi::IsWritable(pGainAuto)) {
-    NODELET_WARN_STREAM("Unable to disable auto brightness");
+    NODELET_WARN_STREAM("Unable to disable auto gain & exposure");
     return;
   }
 
@@ -1336,6 +1333,22 @@ float ArenaCameraNodeletBase::calcCurrentBrightness() {
   return sum;
 }
 
+//-------------------------------------------------------------------
+// Functions for dealing with LUT
+//
+// \todo{amarburg}  Very simple right now
+//
+
+void ArenaCameraNodeletBase::enableLUT(bool enable) {
+  try {
+    Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "LUTEnable", enable);
+  } catch (const GenICam::GenericException &e) {
+    NODELET_ERROR_STREAM("An exception while setting LUTEnable to "
+                         << (enable ? "true" : "false")
+                         << " occurred: " << e.GetDescription());
+  }
+}
+
 //------------------------------------------------------------------------
 //  ROS Reconfigure callback
 //
@@ -1346,8 +1359,6 @@ void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
 
   if (config.frame_rate != previous_config_.frame_rate) {
     arena_camera_parameter_set_.setFrameRate(config.frame_rate);
-
-    NODELET_INFO_STREAM("Updating frame rate to " << frameRate() << " fps");
     updateFrameRate();
   }
 
@@ -1358,7 +1369,13 @@ void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
     arena_camera_parameter_set_.exposure_ms_ = config.exposure_ms;
     arena_camera_parameter_set_.auto_exposure_max_ms_ =
         config.auto_exposure_max_ms;
+
     updateExposure();
+  }
+
+  if ((config.auto_gain != previous_config_.auto_gain)) {
+    arena_camera_parameter_set_.gain_auto_ = config.auto_gain;
+    updateGain();
   }
 
   // Save config

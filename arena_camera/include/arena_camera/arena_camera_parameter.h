@@ -209,6 +209,8 @@ class ArenaCameraParameter {
    */
   bool exposure_auto_;
   bool gain_auto_;
+
+  bool enable_lut_;
   // #######################################################################
 
   double exposure_ms_;

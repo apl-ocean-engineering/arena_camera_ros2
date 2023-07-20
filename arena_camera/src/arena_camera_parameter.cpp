@@ -53,7 +53,6 @@ ArenaCameraParameter::ArenaCameraParameter()
       // ##########################
       gain_auto_(true),
       gain_(0.5),
-      gain_given_(false),
       gamma_(1.0),
       gamma_given_(false),
       brightness_(100),
@@ -63,6 +62,7 @@ ArenaCameraParameter::ArenaCameraParameter()
       exposure_auto_(true),
       exposure_ms_(10000.0),
       auto_exposure_max_ms_(0.0),
+      enable_lut_(false),
       mtu_size_(1400),
       inter_pkg_delay_(1000),
       shutter_mode_(SM_DEFAULT),
@@ -159,21 +159,19 @@ void ArenaCameraParameter::readFromRosParameterServer(
     ROS_DEBUG_STREAM("gamma is given and has value " << gamma_);
   }
 
-  // > 0: Exposure time in microseconds
-  brightness_given_ = nh.hasParam("brightness");
-  gain_given_ = nh.hasParam("gain");
-
-  if (gain_given_) {
-    nh.getParam("gain", gain_);
+  bool gain_given = nh.getParam("gain", gain_);
+  if (gain_given) {
     ROS_DEBUG_STREAM("gain is given and has value " << gain_);
   }
+
+  brightness_given_ = nh.hasParam("brightness");
   if (brightness_given_) {
     nh.getParam("brightness", brightness_);
     ROS_DEBUG_STREAM("brightness is given and has value " << brightness_);
   }
 
   // ignore brightness?
-  auto ignoreBrightness = brightness_given_ && gain_given_;
+  auto ignoreBrightness = brightness_given_ && gain_given;
   if (ignoreBrightness) {
     ROS_WARN_STREAM(
         "Gain ('gain') and Exposure Time ('exposure') "
@@ -224,11 +222,11 @@ void ArenaCameraParameter::readFromRosParameterServer(
   // 1 FFF (gain_auto_ 's default value is not set to true)
 
   // 2 FFT
-  if (!gain_given_ && !gain_auto_given && gain_auto_) {
+  if (!gain_given && !gain_auto_given && gain_auto_) {
     // default case nothing to show/do
   }
   // 3 FTF
-  else if (!gain_given_ && gain_auto_given && !gain_auto_) {
+  else if (!gain_given && gain_auto_given && !gain_auto_) {
     // it is ok to pass gain_auto explicitly to false
     // with no gain value. Gain value will taken from device nodemap
     ROS_DEBUG_STREAM("gain_auto is given and has value Off/false");
@@ -236,38 +234,34 @@ void ArenaCameraParameter::readFromRosParameterServer(
     // TODO SET ON THE NODE MAP
   }
   // 4 FTT
-  else if (!gain_given_ && gain_auto_given && gain_auto_) {
+  else if (!gain_given && gain_auto_given && gain_auto_) {
     ROS_DEBUG_STREAM("gain_auto is given and has value Continuous/true");
   }
 
   // 5 TFF (gain_auto_ 's default value is not set true)
 
   // 6 TFT
-  else if (gain_given_ && !gain_auto_given && gain_auto_) {
+  else if (gain_given && !gain_auto_given && gain_auto_) {
     gain_auto_ = false;  // change because it defaults to true;
     // no msg it is not take from the param server
   }
   // 7 TTF
-  else if (gain_given_ && gain_auto_given && !gain_auto_) {
+  else if (gain_given && gain_auto_given && !gain_auto_) {
     ROS_DEBUG_STREAM("gain_auto is given and has value Off/false");
   }
   // 8 TTT
-  else if (gain_given_ && gain_auto_given && gain_auto_)  // ignore auto
+  else if (gain_given && gain_auto_given && gain_auto_)  // ignore auto
   {
     ROS_DEBUG_STREAM("gain_auto is given and has value Continuous/true");
     gain_auto_ = false;
     ROS_WARN_STREAM("gain_auto is ignored because gain is given.");
   }
 
-  // ##########################
+  nh.param<bool>("enable_lut", enable_lut_, false);
 
-  if (nh.hasParam("gige/mtu_size")) {
-    nh.getParam("gige/mtu_size", mtu_size_);
-  }
-
-  if (nh.hasParam("gige/inter_pkg_delay")) {
-    nh.getParam("gige/inter_pkg_delay", inter_pkg_delay_);
-  }
+  // Gig-E specific params
+  nh.param<int>("gige/mtu_size", mtu_size_, 1400);
+  nh.param<int>("gige/inter_pkg_delay", inter_pkg_delay_, 1000);
 
   std::string shutter_param_string;
   nh.param<std::string>("shutter_mode", shutter_param_string, "");
@@ -317,11 +311,10 @@ void ArenaCameraParameter::validateParameterSet(const ros::NodeHandle& nh) {
   //   exposure_given_ = false;
   // }
 
-  if (gain_given_ && (gain_ < 0.0 || gain_ > 1.0)) {
+  if (gain_ < 0.0 || gain_ > 1.0) {
     ROS_WARN_STREAM("Desired gain (in percent) not in allowed range! "
                     << "Gain = " << gain_
                     << ". Will reset it to default value!");
-    gain_given_ = false;
   }
 
   if (brightness_given_ && (brightness_ < 0.0 || brightness_ > 255)) {
