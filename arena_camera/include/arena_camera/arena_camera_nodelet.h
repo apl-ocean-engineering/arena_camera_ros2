@@ -123,13 +123,6 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
 
   void updateFrameRate();
 
-  // Update exposure based on arena_camera_parameter_set
-  void updateExposure();
-
-  void updateGain();
-
-  void updateGamma();
-
   /**
    * Update area of interest in the camera image
    * @param target_roi the target roi
@@ -158,24 +151,6 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
   bool setBinningY(const size_t &target_binning_y, size_t &reached_binning_y);
 
   /**
-   * Service callback for updating the cameras binning setting
-   * @param req request
-   * @param res response
-   * @return true on success
-   */
-  bool setBinningCallback(camera_control_msgs::SetBinning::Request &req,
-                          camera_control_msgs::SetBinning::Response &res);
-
-  /**
-   * Service callback for updating the cameras roi setting
-   * @param req request
-   * @param res response
-   * @return true on success
-   */
-  bool setROICallback(camera_control_msgs::SetROI::Request &req,
-                      camera_control_msgs::SetROI::Response &res);
-
-  /**
    * Sets the target brightness which is the intensity-mean over all pixels.
    * If the target exposure time is not in the range of Arena's auto target
    * brightness range the extended brightness search is started.
@@ -190,55 +165,50 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    *                      reached adapting the gain.
    * @return true if the brightness could be reached or false otherwise.
    */
-  bool setBrightness(const int &target_brightness, int &reached_brightness,
-                     const bool &exposure_auto, const bool &gain_auto);
+  // bool setBrightness(const int &target_brightness, int &reached_brightness,
+  //                    const bool &exposure_auto, const bool &gain_auto);
 
-  /**
-   * Service callback for setting the brightness
-   * @param req request
-   * @param res response
-   * @return true on success
-   */
-  bool setBrightnessCallback(camera_control_msgs::SetBrightness::Request &req,
-                             camera_control_msgs::SetBrightness::Response &res);
+  void setTargetBrightness(unsigned int brightness);
 
-  bool setGainValue(const float &target_gain, float &reached_gain);
+  //==== Functions to get/set exposure ====
+
+  enum class AutoExposureMode : int { Off = 0, Once = 1, Continuous = 2 };
+
+  // Update exposure based on arena_camera_parameter_set
+  //
+  //  If exp_mode == Off, exposure_ms is the **fixed exposure** set in the
+  //  camera If exp_mode == Once or Continuous, exposure_ms is the **max
+  //  exposure** allowed
+  //                   for the auto-exposure algorithm
+  void setExposure(AutoExposureMode exp_mode, float exposure_ms);
+
+  float currentExposure();
+  //==== Functions to get/set gain ====
+
+  enum class AutoGainMode : int { Off = 0, Once = 1, Continuous = 2 };
 
   /**
    * Update the gain from the camera to a target gain in percent
-   * @param target_gain the targeted gain in percent
+   * @param gain_mode   Request gain mode
+   * @param target_gain the targeted gain in percent.  Ignored if gain_mode
+   * isn't "Off"
    * @param reached_gain the gain that could be reached
    * @return true if the targeted gain could be reached
    */
-  bool setGain(const float &target_gain, float &reached_gain);
+  bool setGain(AutoGainMode gain_mode, float target_gain = 0.0);
 
-  /**
-   * Service callback for setting the desired gain in percent
-   * @param req request
-   * @param res response
-   * @return true on success
-   */
-  bool setGainCallback(camera_control_msgs::SetGain::Request &req,
-                       camera_control_msgs::SetGain::Response &res);
+  float currentGain();
 
-  bool setGammaValue(const float &target_gamma, float &reached_gamma);
+  //==== Functions to get/set gamma ====
 
   /**
    * Update the gamma from the camera to a target gamma correction value
    * @param target_gamma the targeted gamma
-   * @param reached_gamma the gamma that could be reached
    * @return true if the targeted gamma could be reached
    */
-  bool setGamma(const float &target_gamma, float &reached_gamma);
+  bool setGamma(const float &target_gamma);
 
-  /**
-   * Service callback for setting the desired gamma correction value
-   * @param req request
-   * @param res response
-   * @return true on success
-   */
-  bool setGammaCallback(camera_control_msgs::SetGamma::Request &req,
-                        camera_control_msgs::SetGamma::Response &res);
+  float currentGamma();
 
   /**
    * Generates the subset of points on which the brightness search will be
@@ -269,36 +239,15 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
                                const cv::Mat &K);
 
   /**
-   * Callback that sets the digital user output
-   * @param output_id the ID of the user output to set
-   * @param req request
-   * @param res response
-   * @return true on success
-   */
-  bool setUserOutputCB(int output_id,
-                       camera_control_msgs::SetBool::Request &req,
-                       camera_control_msgs::SetBool::Response &res);
-
-  /**
-  * Callback that activates the digital user output to
-  be used as autoflash
-  * @param output_id the ID of the user output to set
-  * @param req request
-  * @param res response
-  * @return true on success
-  */
-  bool setAutoflash(const int output_id,
-                    camera_control_msgs::SetBool::Request &req,
-                    camera_control_msgs::SetBool::Response &res);
-
-  /*
+   *  Enable/disable lookup table (LUT) in camera.
+   * @param enable Whether to enable/disable the camera LUT
    */
   void enableLUT(bool enable);
 
  protected:
   /// @brief
   /// @param cam_info_msg
-  void initializeCameraInfo(sensor_msgs::CameraInfo &cam_info_msg);
+  // void initializeCameraInfo(sensor_msgs::CameraInfo &cam_info_msg);
 
   Arena::ISystem *pSystem_;
   Arena::IDevice *pDevice_;
@@ -309,11 +258,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
   // Hardware accessor functions
   // These might have originally been in arena_camera.h?
   sensor_msgs::RegionOfInterest currentROI();
-  float currentGamma();
   int64_t currentBinningX();
   int64_t currentBinningY();
-  float currentGain();
-  float currentExposure();
   std::string currentROSEncoding();
   bool setBinningXValue(const size_t &target_binning_x,
                         size_t &reached_binning_x);
@@ -324,10 +270,6 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
   ros::Publisher metadata_pub_;
 
   ArenaCameraParameter arena_camera_parameter_set_;
-  ros::ServiceServer set_binning_srv_;
-  ros::ServiceServer set_roi_srv_;
-  ros::ServiceServer set_gain_srv_;
-  ros::ServiceServer set_gamma_srv_;
 
   std::vector<ros::ServiceServer> set_user_output_srvs_;
 
@@ -336,15 +278,13 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
 
   image_geometry::PinholeCameraModel pinhole_model_;
 
-  //  GrabImagesAS* grab_imgs_raw_as_;
-
   // Don't like using this global member
   sensor_msgs::Image img_raw_msg_;
 
   camera_info_manager::CameraInfoManager *camera_info_manager_;
 
   std::vector<std::size_t> sampling_indices_;
-  std::array<float, 256> brightness_exp_lut_;
+  // std::array<float, 256> brightness_exp_lut_;
 
   boost::recursive_mutex device_mutex_;
 
@@ -374,17 +314,14 @@ class ArenaCameraStreamingNodelet : public ArenaCameraNodeletBase {
   ArenaCameraStreamingNodelet();
   virtual ~ArenaCameraStreamingNodelet();
 
-  virtual void onInit();
+  void onInit() override;
 
  protected:
-  // ros::Timer image_timer_;
-
   typedef std::function<void(Arena::IImage *pImage)> ImageCallback_t;
 
   class ImageCallback : public Arena::IImageCallback {
    public:
     ImageCallback(ImageCallback_t cb) : image_callback_(cb) {}
-
     ~ImageCallback() {}
 
     void OnImage(Arena::IImage *pImage) { image_callback_(pImage); }
@@ -407,11 +344,7 @@ class ArenaCameraPolledNodelet : public ArenaCameraNodeletBase {
   ArenaCameraPolledNodelet();
   virtual ~ArenaCameraPolledNodelet();
 
-  /**
-   * initialize the camera and the ros node.
-   * calls ros::shutdown if an error occurs.
-   */
-  virtual void onInit();
+  void onInit() override;
 
   /**
    * Callback for the grab images action

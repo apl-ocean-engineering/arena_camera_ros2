@@ -302,20 +302,21 @@ camera_control_msgs::GrabImagesResult ArenaCameraPolledNodelet::grabImagesRaw(
       //                              result.reached_exposure_times[i]);
     }
     if (goal->gain_given) {
-      result.success =
-          setGain(goal->gain_values[i], result.reached_gain_values[i]);
+      result.success = setGain(ArenaCameraPolledNodelet::AutoGainMode::Off,
+                               goal->gain_values[i]);
+      result.reached_gain_values[i] = currentGain();
     }
     if (goal->gamma_given) {
-      result.success =
-          setGamma(goal->gamma_values[i], result.reached_gamma_values[i]);
+      result.success = setGamma(goal->gamma_values[i]);
+      result.reached_gamma_values[i] = currentGamma();
     }
     if (goal->brightness_given) {
-      int reached_brightness;
-      result.success =
-          setBrightness(goal->brightness_values[i], reached_brightness,
-                        goal->exposure_auto, goal->gain_auto);
-      result.reached_brightness_values[i] =
-          static_cast<float>(reached_brightness);
+      // int reached_brightness;
+      // result.success =
+      //     setBrightness(goal->brightness_values[i], reached_brightness,
+      //                   goal->exposure_auto, goal->gain_auto);
+      // result.reached_brightness_values[i] =
+      //     static_cast<float>(reached_brightness);
       //    result.reached_exposure_times[i] = currentExposure();
       //    result.reached_gain_values[i] = currentGain();
     }
@@ -356,14 +357,14 @@ camera_control_msgs::GrabImagesResult ArenaCameraPolledNodelet::grabImagesRaw(
     // setExposure(previous_exp, reached_val);
   }
   if (goal->gain_given) {
-    setGain(previous_gain, reached_val);
+    // setGain(previous_gain, reached_val);
   }
   if (goal->gamma_given) {
-    setGamma(previous_gamma, reached_val);
+    // setGamma(previous_gamma, reached_val);
   }
   if (goal->brightness_given) {
-    setGain(previous_gain, reached_val);
-    // setExposure(previous_exp, reached_val);
+    // setGain(previous_gain, reached_val);
+    //  setExposure(previous_exp, reached_val);
   }
   return result;
 }

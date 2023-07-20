@@ -66,8 +66,7 @@ ArenaCameraNodeletBase::ArenaCameraNodeletBase()
       img_raw_pub_(),
       pinhole_model_(),
       camera_info_manager_(nullptr),
-      sampling_indices_(),
-      brightness_exp_lut_() {}
+      sampling_indices_() {}
 
 ArenaCameraNodeletBase::~ArenaCameraNodeletBase() {
   if (pDevice_ != nullptr) {
@@ -89,15 +88,6 @@ void ArenaCameraNodeletBase::onInit() {
   metadata_pub_ =
       nh.advertise<imaging_msgs::ImagingMetadata>("imaging_metadata", 1);
 
-  set_binning_srv_ = nh.advertiseService(
-      "set_binning", &ArenaCameraNodeletBase::setBinningCallback, this);
-  set_roi_srv_ = nh.advertiseService(
-      "set_roi", &ArenaCameraNodeletBase::setROICallback, this);
-  set_gain_srv_ = nh.advertiseService(
-      "set_gain", &ArenaCameraNodeletBase::setGainCallback, this);
-  set_gamma_srv_ = nh.advertiseService(
-      "set_gamma", &ArenaCameraNodeletBase::setGammaCallback, this);
-
   it_.reset(new image_transport::ImageTransport(nh));
   img_raw_pub_ = it_->advertiseCamera("image_raw", 1);
 
@@ -113,14 +103,8 @@ void ArenaCameraNodeletBase::onInit() {
       ros::Duration(2), &ArenaCameraNodeletBase::diagnostics_timer_callback_,
       this);
 
-  // Read all parameters from parameter server
+  // Initialize parameters from parameter server
   arena_camera_parameter_set_.readFromRosParameterServer(pnh);
-
-  // setting the camera info URL to produce rectified image. Can substitute
-  // any desired file path or comment out this line if only producing raw
-  // images.
-  //  arena_camera_parameter_set_.setCameraInfoURL(nh,
-  //  "file://${ROS_HOME}/camera_info/camera.yaml");
 
   // Open the Arena SDK
   pSystem_ = Arena::OpenSystem();
@@ -151,15 +135,12 @@ void ArenaCameraNodeletBase::onInit() {
     }
   }
 
-  // starting the grabbing procedure with the desired image-settings
   if (!configureCamera()) {
     NODELET_FATAL_STREAM("Unable to configure camera");
     return;
   }
 
-  //
   _dynReconfigureServer = std::make_shared<DynReconfigureServer>(pnh);
-
   _dynReconfigureServer->setCallback(boost::bind(
       &ArenaCameraNodeletBase::reconfigureCallbackWrapper, this, _1, _2));
 }
@@ -303,13 +284,8 @@ bool ArenaCameraNodeletBase::configureCamera() {
                                              "Software");
     }
 
-    // Parameters controlled by param / dynamic reonfigure are not set here
-    // Assume there will be an immediate call from dynamic reconfigure
-
-    //
-    // GAMMA
-    //
-    updateGamma();
+    //!! Parameters controlled by param / dynamic reonfigure are not set here
+    //!! Assume there will be an immediate call from dynamic reconfigure
 
     // LUT
     NODELET_INFO_STREAM(
@@ -322,7 +298,7 @@ bool ArenaCameraNodeletBase::configureCamera() {
     //
     //  Initial setting of the CameraInfo-msg, assuming no calibration given
     CameraInfo initial_cam_info;
-    initializeCameraInfo(initial_cam_info);
+    // initializeCameraInfo(initial_cam_info);
     camera_info_manager_->setCameraInfo(initial_cam_info);
 
     if (arena_camera_parameter_set_.cameraInfoURL().empty() ||
@@ -609,24 +585,6 @@ bool ArenaCameraNodeletBase::setImageEncoding(const std::string &ros_encoding) {
   return true;
 }
 
-bool ArenaCameraNodeletBase::setUserOutputCB(
-    const int output_id, camera_control_msgs::SetBool::Request &req,
-    camera_control_msgs::SetBool::Response &res) {
-  //  res.success = arena_camera_->setUserOutput(output_id, req.data);
-  return true;
-}
-
-bool ArenaCameraNodeletBase::setAutoflash(
-    const int output_id, camera_control_msgs::SetBool::Request &req,
-    camera_control_msgs::SetBool::Response &res) {
-  NODELET_INFO("AutoFlashCB: %i -> %i", output_id, req.data);
-  std::map<int, bool> auto_flashs;
-  auto_flashs[output_id] = req.data;
-  //    arena_camera_->setAutoflash(auto_flashs);
-  res.success = true;
-  return true;
-}
-
 void ArenaCameraNodeletBase::updateFrameRate() {
   try {
     ros::NodeHandle nh = getNodeHandle();
@@ -693,98 +651,98 @@ void ArenaCameraNodeletBase::updateFrameRate() {
   }
 }
 
-void ArenaCameraNodeletBase::initializeCameraInfo(
-    sensor_msgs::CameraInfo &cam_info_msg) {
-  // http://www.ros.org/reps/rep-0104.html
-  // If the camera is uncalibrated, the matrices D, K, R, P should be left
-  // zeroed out. In particular, clients may assume that K[0] == 0.0
-  // indicates an uncalibrated camera.
-  cam_info_msg.header.frame_id = cameraFrame();
-  cam_info_msg.header.stamp = ros::Time::now();
+// void ArenaCameraNodeletBase::initializeCameraInfo(
+//     sensor_msgs::CameraInfo &cam_info_msg) {
+//   // http://www.ros.org/reps/rep-0104.html
+//   // If the camera is uncalibrated, the matrices D, K, R, P should be left
+//   // zeroed out. In particular, clients may assume that K[0] == 0.0
+//   // indicates an uncalibrated camera.
+//   cam_info_msg.header.frame_id = cameraFrame();
+//   cam_info_msg.header.stamp = ros::Time::now();
 
-  // The image dimensions with which the camera was calibrated. Normally
-  // this will be the full camera resolution in pixels. They remain fix,
-  // even if binning is applied rows and colums
-  cam_info_msg.height =
-      Arena::GetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height");
-  cam_info_msg.width =
-      Arena::GetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width");
+//   // The image dimensions with which the camera was calibrated. Normally
+//   // this will be the full camera resolution in pixels. They remain fix,
+//   // even if binning is applied rows and colums
+//   cam_info_msg.height =
+//       Arena::GetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Height");
+//   cam_info_msg.width =
+//       Arena::GetNodeValue<int64_t>(pDevice_->GetNodeMap(), "Width");
 
-  // The distortion model used. Supported models are listed in
-  // sensor_msgs/distortion_models.h. For most cameras, "plumb_bob" - a
-  // simple model of radial and tangential distortion - is sufficient.
-  // Empty D and distortion_model indicate that the CameraInfo cannot be
-  // used to rectify points or images, either because the camera is not
-  // calibrated or because the rectified image was produced using an
-  // unsupported distortion model, e.g. the proprietary one used by
-  // Bumblebee cameras [http://www.ros.org/reps/rep-0104.html].
-  cam_info_msg.distortion_model = "";
+//   // The distortion model used. Supported models are listed in
+//   // sensor_msgs/distortion_models.h. For most cameras, "plumb_bob" - a
+//   // simple model of radial and tangential distortion - is sufficient.
+//   // Empty D and distortion_model indicate that the CameraInfo cannot be
+//   // used to rectify points or images, either because the camera is not
+//   // calibrated or because the rectified image was produced using an
+//   // unsupported distortion model, e.g. the proprietary one used by
+//   // Bumblebee cameras [http://www.ros.org/reps/rep-0104.html].
+//   cam_info_msg.distortion_model = "";
 
-  // The distortion parameters, size depending on the distortion model.
-  // For "plumb_bob", the 5 parameters are: (k1, k2, t1, t2, k3) ->
-  // float64[] D.
-  cam_info_msg.D = std::vector<double>(5, 0.);
+//   // The distortion parameters, size depending on the distortion model.
+//   // For "plumb_bob", the 5 parameters are: (k1, k2, t1, t2, k3) ->
+//   // float64[] D.
+//   cam_info_msg.D = std::vector<double>(5, 0.);
 
-  // Intrinsic camera matrix for the raw (distorted) images.
-  //     [fx  0 cx]
-  // K = [ 0 fy cy]  --> 3x3 row-major matrix
-  //     [ 0  0  1]
-  // Projects 3D points in the camera coordinate frame to 2D pixel
-  // coordinates using the focal lengths (fx, fy) and principal point (cx,
-  // cy).
-  cam_info_msg.K.assign(0.0);
+//   // Intrinsic camera matrix for the raw (distorted) images.
+//   //     [fx  0 cx]
+//   // K = [ 0 fy cy]  --> 3x3 row-major matrix
+//   //     [ 0  0  1]
+//   // Projects 3D points in the camera coordinate frame to 2D pixel
+//   // coordinates using the focal lengths (fx, fy) and principal point (cx,
+//   // cy).
+//   cam_info_msg.K.assign(0.0);
 
-  // Rectification matrix (stereo cameras only)
-  // A rotation matrix aligning the camera coordinate system to the ideal
-  // stereo image plane so that epipolar lines in both stereo images are
-  // parallel.
-  cam_info_msg.R.assign(0.0);
+//   // Rectification matrix (stereo cameras only)
+//   // A rotation matrix aligning the camera coordinate system to the ideal
+//   // stereo image plane so that epipolar lines in both stereo images are
+//   // parallel.
+//   cam_info_msg.R.assign(0.0);
 
-  // Projection/camera matrix
-  //     [fx'  0  cx' Tx]
-  // P = [ 0  fy' cy' Ty]  --> # 3x4 row-major matrix
-  //     [ 0   0   1   0]
-  // By convention, this matrix specifies the intrinsic (camera) matrix of
-  // the processed (rectified) image. That is, the left 3x3 portion is the
-  // normal camera intrinsic matrix for the rectified image. It projects 3D
-  // points in the camera coordinate frame to 2D pixel coordinates using the
-  // focal lengths (fx', fy') and principal point (cx', cy') - these may
-  // differ from the values in K. For monocular cameras, Tx = Ty = 0.
-  // Normally, monocular cameras will also have R = the identity and
-  // P[1:3,1:3] = K. For a stereo pair, the fourth column [Tx Ty 0]' is
-  // related to the position of the optical center of the second camera in
-  // the first camera's frame. We assume Tz = 0 so both cameras are in the
-  // same stereo image plane. The first camera always has Tx = Ty = 0. For
-  // the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx =
-  // -fx' * B, where B is the baseline between the cameras. Given a 3D point
-  // [X Y Z]', the projection (x, y) of the point onto the rectified image
-  // is given by: [u v w]' = P * [X Y Z 1]'
-  //        x = u / w
-  //        y = v / w
-  //  This holds for both images of a stereo pair.
-  cam_info_msg.P.assign(0.0);
+//   // Projection/camera matrix
+//   //     [fx'  0  cx' Tx]
+//   // P = [ 0  fy' cy' Ty]  --> # 3x4 row-major matrix
+//   //     [ 0   0   1   0]
+//   // By convention, this matrix specifies the intrinsic (camera) matrix of
+//   // the processed (rectified) image. That is, the left 3x3 portion is the
+//   // normal camera intrinsic matrix for the rectified image. It projects 3D
+//   // points in the camera coordinate frame to 2D pixel coordinates using the
+//   // focal lengths (fx', fy') and principal point (cx', cy') - these may
+//   // differ from the values in K. For monocular cameras, Tx = Ty = 0.
+//   // Normally, monocular cameras will also have R = the identity and
+//   // P[1:3,1:3] = K. For a stereo pair, the fourth column [Tx Ty 0]' is
+//   // related to the position of the optical center of the second camera in
+//   // the first camera's frame. We assume Tz = 0 so both cameras are in the
+//   // same stereo image plane. The first camera always has Tx = Ty = 0. For
+//   // the right (second) camera of a horizontal stereo pair, Ty = 0 and Tx =
+//   // -fx' * B, where B is the baseline between the cameras. Given a 3D point
+//   // [X Y Z]', the projection (x, y) of the point onto the rectified image
+//   // is given by: [u v w]' = P * [X Y Z 1]'
+//   //        x = u / w
+//   //        y = v / w
+//   //  This holds for both images of a stereo pair.
+//   cam_info_msg.P.assign(0.0);
 
-  // Binning refers here to any camera setting which combines rectangular
-  // neighborhoods of pixels into larger "super-pixels." It reduces the
-  // resolution of the output image to (width / binning_x) x (height /
-  // binning_y). The default values binning_x = binning_y = 0 is considered
-  // the same as binning_x = binning_y = 1 (no subsampling).
-  //  cam_info_msg.binning_x = currentBinningX();
-  //  cam_info_msg.binning_y = currentBinningY();
+//   // Binning refers here to any camera setting which combines rectangular
+//   // neighborhoods of pixels into larger "super-pixels." It reduces the
+//   // resolution of the output image to (width / binning_x) x (height /
+//   // binning_y). The default values binning_x = binning_y = 0 is considered
+//   // the same as binning_x = binning_y = 1 (no subsampling).
+//   //  cam_info_msg.binning_x = currentBinningX();
+//   //  cam_info_msg.binning_y = currentBinningY();
 
-  // Region of interest (subwindow of full camera resolution), given in full
-  // resolution (unbinned) image coordinates. A particular ROI always
-  // denotes the same window of pixels on the camera sensor, regardless of
-  // binning settings. The default setting of roi (all values 0) is
-  // considered the same as full resolution (roi.width = width, roi.height =
-  // height).
+//   // Region of interest (subwindow of full camera resolution), given in full
+//   // resolution (unbinned) image coordinates. A particular ROI always
+//   // denotes the same window of pixels on the camera sensor, regardless of
+//   // binning settings. The default setting of roi (all values 0) is
+//   // considered the same as full resolution (roi.width = width, roi.height =
+//   // height).
 
-  // todo? do these has ti be set via
-  // Arena::GetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX"); or so
-  // ?
-  cam_info_msg.roi.x_offset = cam_info_msg.roi.y_offset = 0;
-  cam_info_msg.roi.height = cam_info_msg.roi.width = 0;
-}
+//   // todo? do these has ti be set via
+//   // Arena::GetNodeValue<int64_t>(pDevice_->GetNodeMap(), "OffsetX"); or so
+//   // ?
+//   cam_info_msg.roi.x_offset = cam_info_msg.roi.y_offset = 0;
+//   cam_info_msg.roi.height = cam_info_msg.roi.width = 0;
+// }
 
 //~~ Binning / ROI ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -941,23 +899,33 @@ bool ArenaCameraNodeletBase::setBinningY(const size_t &target_binning_y,
   return true;
 }
 
-bool ArenaCameraNodeletBase::setBinningCallback(
-    camera_control_msgs::SetBinning::Request &req,
-    camera_control_msgs::SetBinning::Response &res) {
-  size_t reached_binning_x, reached_binning_y;
-  bool success_x = setBinningX(req.target_binning_x, reached_binning_x);
-  bool success_y = setBinningY(req.target_binning_y, reached_binning_y);
-  res.reached_binning_x = static_cast<uint32_t>(reached_binning_x);
-  res.reached_binning_y = static_cast<uint32_t>(reached_binning_y);
-  res.success = success_x && success_y;
-  return true;
-}
+//~~ Brightness / auto controls ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-bool ArenaCameraNodeletBase::setROICallback(
-    camera_control_msgs::SetROI::Request &req,
-    camera_control_msgs::SetROI::Response &res) {
-  res.success = setROI(req.target_roi, res.reached_roi);
-  return true;
+void ArenaCameraNodeletBase::setTargetBrightness(unsigned int brightness) {
+  // const bool was_streaming = is_streaming_;
+  // stopStreaming();
+
+  try {
+    GenApi::CIntegerPtr pTargetBrightness =
+        pDevice_->GetNodeMap()->GetNode("TargetBrightness");
+
+    if (GenApi::IsWritable(pTargetBrightness)) {
+      if (brightness > 255) brightness = 255;
+      pTargetBrightness->SetValue(brightness);
+
+      NODELET_INFO_STREAM("Set target brightness to "
+                          << pTargetBrightness->GetValue());
+    } else {
+      NODELET_INFO_STREAM("TargetBrightness is not writeable; current value "
+                          << pTargetBrightness->GetValue());
+    }
+  } catch (const GenICam::GenericException &e) {
+    NODELET_ERROR_STREAM(
+        "An exception while setting TargetBrightness: " << e.GetDescription());
+  }
+
+  // if (was_streaming)
+  //   startStreaming();
 }
 
 //~~ Exposure ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -975,55 +943,18 @@ float ArenaCameraNodeletBase::currentExposure() {
   }
 }
 
-void ArenaCameraNodeletBase::updateExposure() {
+void ArenaCameraNodeletBase::setExposure(
+    ArenaCameraNodeletBase::AutoExposureMode exp_mode, float exposure_ms) {
   auto pNodeMap = pDevice_->GetNodeMap();
   // exposure_auto_ will be already set to false if exposure_given_ is true
   // read params () solved the priority between them
-  if (arena_camera_parameter_set_.exposure_auto_) {
-    Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
-                                           "Continuous");
-
-    if (arena_camera_parameter_set_.auto_exposure_max_ms_ > 0) {
-      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAutoLimitAuto",
-                                             "Off");
-      GenApi::CFloatPtr pExposureUpperLimit =
-          pDevice_->GetNodeMap()->GetNode("ExposureAutoUpperLimit");
-      if (GenApi::IsWritable(pExposureUpperLimit)) {
-        // The parameter in the camera is in us
-        pExposureUpperLimit->SetValue(
-            static_cast<int64_t>(
-                arena_camera_parameter_set_.auto_exposure_max_ms_) *
-            1000);
-      } else {
-        NODELET_INFO("ExposureAutoUpperLimit is not writeable");
-      }
-
-    } else {
-      // Use automatic auto-exposure limits
-      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAutoLimitAuto",
-                                             "Continuous");
-    }
-
-    NODELET_INFO_STREAM(
-        "Enabling autoexposure with limits "
-        << Arena::GetNodeValue<double>(pNodeMap, "ExposureAutoLowerLimit")
-        << " to "
-        << Arena::GetNodeValue<double>(pNodeMap, "ExposureAutoUpperLimit"));
-
-    // Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAutoLimitAuto",
-    //                                        "Continuous");
-
-    // Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
-    //                                        "Continuous");
-
-    NODELET_INFO_STREAM("Setting auto-exposure to _on_ / Continuous");
-  } else {
+  if (exp_mode == ArenaCameraNodeletBase::AutoExposureMode::Off) {
     Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto", "Off");
 
     GenApi::CFloatPtr pExposureTime =
         pDevice_->GetNodeMap()->GetNode("ExposureTime");
 
-    float exposure_to_set = arena_camera_parameter_set_.exposure_ms_ * 1000;
+    float exposure_to_set = exposure_ms * 1000;
     if (exposure_to_set < pExposureTime->GetMin()) {
       NODELET_WARN_STREAM("Desired exposure ("
                           << exposure_to_set << ") "
@@ -1042,109 +973,92 @@ void ArenaCameraNodeletBase::updateExposure() {
 
     NODELET_INFO_STREAM("Setting auto-exposure _off_ with exposure of "
                         << pExposureTime->GetValue() << " ms");
+  } else {
+    if (exp_mode == ArenaCameraNodeletBase::AutoExposureMode::Once) {
+      NODELET_INFO_STREAM("Setting auto-exposure to _on_ / Once");
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto", "Once");
+    } else {
+      NODELET_INFO_STREAM("Setting auto-exposure to _on_ / Continuous");
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAuto",
+                                             "Continuous");
+    }
+
+    if (exposure_ms > 0) {
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAutoLimitAuto",
+                                             "Off");
+      GenApi::CFloatPtr pExposureUpperLimit =
+          pDevice_->GetNodeMap()->GetNode("ExposureAutoUpperLimit");
+      if (GenApi::IsWritable(pExposureUpperLimit)) {
+        // The parameter in the camera is in us
+        pExposureUpperLimit->SetValue(static_cast<int64_t>(exposure_ms) * 1000);
+      } else {
+        NODELET_INFO("ExposureAutoUpperLimit is not writeable");
+      }
+
+    } else {
+      // Use automatic auto-exposure limits
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "ExposureAutoLimitAuto",
+                                             "Continuous");
+    }
+
+    NODELET_INFO_STREAM(
+        "Enabling autoexposure with limits "
+        << Arena::GetNodeValue<double>(pNodeMap, "ExposureAutoLowerLimit")
+        << " to "
+        << Arena::GetNodeValue<double>(pNodeMap, "ExposureAutoUpperLimit"));
   }
 }
 
 //~~ Gain ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-void ArenaCameraNodeletBase::updateGain() {
-  auto pNodeMap = pDevice_->GetNodeMap();
-  // gain_auto_ will be already set to false if gain_given_ is true
-  // read params () solved the priority between them
-  if (arena_camera_parameter_set_.gain_auto_) {
-    Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Continuous");
-    // todo update parameter on the server
-    NODELET_INFO_STREAM("Setting auto-gain to _on_ / Continuous");
-  } else {
-    Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Off");
-    // todo update parameter on the server
-    NODELET_INFO_STREAM("Setting auto-gain to _off_");
-  }
-
-  if (arena_camera_parameter_set_.gain_given_) {
-    float reached_gain;
-    if (setGain(arena_camera_parameter_set_.gain_, reached_gain)) {
-      // Note: ont update the ros param because it might keep
-      // decreasing or incresing overtime when rerun
-      NODELET_INFO_STREAM("Setting gain to: "
-                          << arena_camera_parameter_set_.gain_
-                          << ", reached: " << reached_gain);
-    }
-  }
-}
-
-bool ArenaCameraNodeletBase::setGainValue(const float &target_gain,
-                                          float &reached_gain) {
+bool ArenaCameraNodeletBase::setGain(
+    ArenaCameraNodeletBase::AutoGainMode gain_mode, float target_gain) {
   try {
+    auto pNodeMap = pDevice_->GetNodeMap();
+
     Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(), "GainAuto",
                                            "Off");
 
-    GenApi::CFloatPtr pGain = pDevice_->GetNodeMap()->GetNode("Gain");
-    float truncated_gain = target_gain;
-    if (truncated_gain < pGain->GetMin()) {
-      NODELET_WARN_STREAM(
-          "Desired gain ("
-          << target_gain << ") in "
-          << "percent out of range [0.0 - 1.0]! Setting to lower "
-          << "limit: 0.0");
-      truncated_gain = pGain->GetMin();
-    } else if (truncated_gain > pGain->GetMax()) {
-      NODELET_WARN_STREAM(
-          "Desired gain ("
-          << target_gain << ") in "
-          << "percent out of range [0.0 - 1.0]! Setting to upper "
-          << "limit: 1.0");
-      truncated_gain = pGain->GetMax();
+    if (gain_mode == ArenaCameraNodeletBase::AutoGainMode::Off) {
+      NODELET_INFO_STREAM("Setting auto-gain to _off_");
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Off");
+      // todo update parameter on the server
+
+      GenApi::CFloatPtr pGain = pDevice_->GetNodeMap()->GetNode("Gain");
+      float truncated_gain = target_gain;
+
+      if (truncated_gain < 0.0) {
+        NODELET_WARN_STREAM("Desired gain ("
+                            << target_gain
+                            << ") out of range [0.0,1.0]! Setting to 0.0");
+        target_gain = 0.0;
+      } else if (truncated_gain > 1.0) {
+        NODELET_WARN_STREAM("Desired gain ("
+                            << target_gain
+                            << ") out of range [0.0,1.0]! Setting to 1.0");
+        target_gain = 1.0;
+      }
+
+      const float gain_min = pGain->GetMin(), gain_max = pGain->GetMax();
+      float gain_to_set = gain_min + target_gain * (gain_max - gain_min);
+      pGain->SetValue(gain_to_set);
+
+    } else if (gain_mode == ArenaCameraNodeletBase::AutoGainMode::Once) {
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Once");
+      NODELET_INFO_STREAM("Setting auto-gain to _on_ / Once");
+
+    } else if (gain_mode == ArenaCameraNodeletBase::AutoGainMode::Continuous) {
+      Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto",
+                                             "Continuous");
+      NODELET_INFO_STREAM("Setting auto-gain to _on_ / Continuous");
+    } else {
     }
 
-    float gain_to_set =
-        pGain->GetMin() + truncated_gain * (pGain->GetMax() - pGain->GetMin());
-    pGain->SetValue(gain_to_set);
-    reached_gain = currentGain();
   } catch (const GenICam::GenericException &e) {
-    NODELET_ERROR_STREAM("An exception while setting target gain to "
-                         << target_gain << " occurred: " << e.GetDescription());
+    NODELET_ERROR_STREAM(
+        "An exception while setting gain: " << e.GetDescription());
     return false;
   }
-  return true;
-}
-
-bool ArenaCameraNodeletBase::setGain(const float &target_gain,
-                                     float &reached_gain) {
-  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
-  // if ( !arena_camera_->isReady() )
-  // {
-  //         NODELET_WARN("Error in setGain(): arena_camera_ is not
-  //         ready!"); return false;
-  // }
-  //
-  if (ArenaCameraNodeletBase::setGainValue(target_gain, reached_gain)) {
-    return true;
-  } else  // retry till timeout
-  {
-    // wait for max 5s till the cam has updated the exposure
-    ros::Rate r(10.0);
-    ros::Time timeout(ros::Time::now() + ros::Duration(5.0));
-    while (ros::ok()) {
-      if (ArenaCameraNodeletBase::setGainValue(target_gain, reached_gain)) {
-        return true;
-      }
-
-      if (ros::Time::now() > timeout) {
-        break;
-      }
-      r.sleep();
-    }
-    NODELET_ERROR_STREAM("Error in setGain(): Unable to set target "
-                         << "gain before timeout");
-    return false;
-  }
-}
-
-bool ArenaCameraNodeletBase::setGainCallback(
-    camera_control_msgs::SetGain::Request &req,
-    camera_control_msgs::SetGain::Response &res) {
-  res.success = setGain(req.target_gain, res.reached_gain);
   return true;
 }
 
@@ -1168,20 +1082,7 @@ void ArenaCameraNodeletBase::disableAllRunningAutoBrightessFunctions() {
 
 //~~ Gamma ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-void ArenaCameraNodeletBase::updateGamma() {
-  auto pNodeMap = pDevice_->GetNodeMap();
-  if (arena_camera_parameter_set_.gamma_given_) {
-    float reached_gamma;
-    if (setGamma(arena_camera_parameter_set_.gamma_, reached_gamma)) {
-      NODELET_INFO_STREAM("Setting gamma to "
-                          << arena_camera_parameter_set_.gamma_
-                          << ", reached: " << reached_gamma);
-    }
-  }
-}
-
-bool ArenaCameraNodeletBase::setGammaValue(const float &target_gamma,
-                                           float &reached_gamma) {
+bool ArenaCameraNodeletBase::setGamma(const float &target_gamma) {
   // for GigE cameras you have to enable gamma first
 
   GenApi::CBooleanPtr pGammaEnable =
@@ -1192,7 +1093,6 @@ bool ArenaCameraNodeletBase::setGammaValue(const float &target_gamma,
 
   GenApi::CFloatPtr pGamma = pDevice_->GetNodeMap()->GetNode("Gamma");
   if (!pGamma || !GenApi::IsWritable(pGamma)) {
-    reached_gamma = -1;
     return true;
   } else {
     try {
@@ -1209,7 +1109,7 @@ bool ArenaCameraNodeletBase::setGammaValue(const float &target_gamma,
             << gamma_to_set);
       }
       pGamma->SetValue(gamma_to_set);
-      reached_gamma = currentGamma();
+
     } catch (const GenICam::GenericException &e) {
       NODELET_ERROR_STREAM("An exception while setting target gamma to "
                            << target_gamma
@@ -1217,40 +1117,6 @@ bool ArenaCameraNodeletBase::setGammaValue(const float &target_gamma,
       return false;
     }
   }
-  return true;
-}
-
-bool ArenaCameraNodeletBase::setGamma(const float &target_gamma,
-                                      float &reached_gamma) {
-  boost::lock_guard<boost::recursive_mutex> lock(device_mutex_);
-  if (ArenaCameraNodeletBase::setGammaValue(target_gamma, reached_gamma)) {
-    return true;
-  } else  // retry till timeout
-  {
-    // wait for max 5s till the cam has updated the gamma value
-    ros::Rate r(10.0);
-    ros::Time timeout(ros::Time::now() + ros::Duration(5.0));
-    while (ros::ok()) {
-      if (ArenaCameraNodeletBase::setGammaValue(target_gamma, reached_gamma)) {
-        return true;
-      }
-
-      if (ros::Time::now() > timeout) {
-        break;
-      }
-      r.sleep();
-    }
-    NODELET_ERROR_STREAM("Error in setGamma(): Unable to set target "
-                         << "gamma before timeout");
-    return false;
-  }
-  return true;
-}
-
-bool ArenaCameraNodeletBase::setGammaCallback(
-    camera_control_msgs::SetGamma::Request &req,
-    camera_control_msgs::SetGamma::Response &res) {
-  res.success = setGamma(req.target_gamma, res.reached_gamma);
   return true;
 }
 
@@ -1357,26 +1223,44 @@ void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
                                                  uint32_t level) {
   NODELET_INFO_STREAM("In reconfigureCallback");
 
+  // -- The following params require stopping streaming, only set if needed --
   if (config.frame_rate != previous_config_.frame_rate) {
     arena_camera_parameter_set_.setFrameRate(config.frame_rate);
     updateFrameRate();
   }
 
-  if ((config.auto_exposure != previous_config_.auto_exposure) ||
-      (config.auto_exposure_max_ms != previous_config_.auto_exposure_max_ms) ||
-      (config.exposure_ms != previous_config_.exposure_ms)) {
-    arena_camera_parameter_set_.exposure_auto_ = config.auto_exposure;
-    arena_camera_parameter_set_.exposure_ms_ = config.exposure_ms;
-    arena_camera_parameter_set_.auto_exposure_max_ms_ =
-        config.auto_exposure_max_ms;
+  // if (config.target_brightness != previous_config_.target_brightness) {
+  setTargetBrightness(config.target_brightness);
+  //}
 
-    updateExposure();
-  }
+  // -- The following can be set while streaming, just set them every time
 
-  if ((config.auto_gain != previous_config_.auto_gain)) {
-    arena_camera_parameter_set_.gain_auto_ = config.auto_gain;
-    updateGain();
+  // if ((config.auto_exposure != previous_config_.auto_exposure) ||
+  //     (config.auto_exposure_max_ms != previous_config_.auto_exposure_max_ms)
+  //     || (config.exposure_ms != previous_config_.exposure_ms)) {
+  arena_camera_parameter_set_.exposure_auto_ = config.auto_exposure;
+  arena_camera_parameter_set_.exposure_ms_ = config.exposure_ms;
+  arena_camera_parameter_set_.auto_exposure_max_ms_ =
+      config.auto_exposure_max_ms;
+
+  if (config.auto_exposure) {
+    setExposure(ArenaCameraNodeletBase::AutoExposureMode::Continuous,
+                config.auto_exposure_max_ms);
+  } else {
+    setExposure(ArenaCameraNodeletBase::AutoExposureMode::Off,
+                config.exposure_ms);
   }
+  // }
+
+  // if ((config.auto_gain != previous_config_.auto_gain)) {
+  arena_camera_parameter_set_.gain_auto_ = config.auto_gain;
+
+  if (arena_camera_parameter_set_.gain_auto_) {
+    setGain(ArenaCameraNodeletBase::AutoGainMode::Continuous);
+  } else {
+    setGain(ArenaCameraNodeletBase::AutoGainMode::Off, config.gain);
+  }
+  // }
 
   // Save config
   previous_config_ = config;
