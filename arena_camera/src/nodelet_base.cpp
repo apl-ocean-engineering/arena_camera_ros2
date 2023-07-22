@@ -274,6 +274,12 @@ bool ArenaCameraNodeletBase::configureCamera() {
     //
     setImageEncoding(arena_camera_parameter_set_.imageEncoding());
 
+    if (encoding_conversions::isHDR(
+            arena_camera_parameter_set_.imageEncoding())) {
+      hdr_metadata_pub_ = nh.advertise<imaging_msgs::HdrImagingMetadata>(
+          "hdr_imaging_metadata", 1);
+    }
+
     //
     // TRIGGER MODE
     //
@@ -1264,6 +1270,37 @@ void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
 
   // Save config
   previous_config_ = config;
+}
+
+//
+// HDR Query and set functions
+//
+float ArenaCameraNodeletBase::currentHdrGain(int channel) {
+  try {
+    Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(),
+                                 "HDRTuningChannelSelector", channel);
+
+    return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(),
+                                       "HDRChannelAnalogGain");
+  } catch (const GenICam::GenericException &e) {
+    NODELET_ERROR_STREAM(
+        "Exception while querying HDR gain: " << e.GetDescription());
+    return -1;
+  }
+}
+
+float ArenaCameraNodeletBase::currentHdrExposure(int channel) {
+  try {
+    Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(),
+                                 "HDRTuningChannelSelector", channel);
+
+    return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(),
+                                       "HDRChannelExposureTime");
+  } catch (const GenICam::GenericException &e) {
+    NODELET_ERROR_STREAM(
+        "Exception while querying HDR exposure time: " << e.GetDescription());
+    return -1;
+  }
 }
 
 //------------------------------------------------------------------------

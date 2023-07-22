@@ -68,6 +68,7 @@
 // Auto-generated dynamic_reconfigure header file
 #include <arena_camera/ArenaCameraConfig.h>
 
+#include "imaging_msgs/HdrImagingMetadata.h"
 #include "imaging_msgs/ImagingMetadata.h"
 
 namespace arena_camera {
@@ -210,6 +211,10 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
 
   float currentGamma();
 
+  //===== Functions for querying HDR channels (IMX490 only)
+  float currentHdrGain(int channel);
+  float currentHdrExposure(int channel);
+
   /**
    * Generates the subset of points on which the brightness search will be
    * executed in order to speed it up. The subset are the indices of the
@@ -267,7 +272,7 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
                         size_t &reached_binning_y);
   void disableAllRunningAutoBrightessFunctions();
 
-  ros::Publisher metadata_pub_;
+  ros::Publisher metadata_pub_, hdr_metadata_pub_;
 
   ArenaCameraParameter arena_camera_parameter_set_;
 

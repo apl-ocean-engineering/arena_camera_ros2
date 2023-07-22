@@ -1,6 +1,10 @@
 /******************************************************************************
  * Software License Agreement (BSD License)
  *
+ * Copyright (C) 2023, University of Washington. All rights reserved.
+ *
+ * based on
+ *
  * Copyright (C) 2016, Magazino GmbH. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +14,7 @@
  *   * Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- *   * Neither the names of Magazino GmbH nor the names of its
+ *   * Neither the names of of the copyright holders nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
  *
@@ -30,6 +34,7 @@
 #include <pluginlib/class_list_macros.h>
 
 #include "arena_camera/arena_camera_nodelet.h"
+#include "arena_camera/encoding_conversions.h"
 
 namespace arena_camera {
 
@@ -131,6 +136,25 @@ void ArenaCameraStreamingNodelet::imageCallback(Arena::IImage *pImage) {
   meta_msg.gain = currentGain();
 
   metadata_pub_.publish(meta_msg);
+
+  if (encoding_conversions::isHDR(currentROSEncoding())) {
+    imaging_msgs::HdrImagingMetadata hdr_meta_msg;
+    hdr_meta_msg.header = meta_msg.header;
+    hdr_meta_msg.exposure_us = meta_msg.exposure_us;
+    hdr_meta_msg.gain = meta_msg.gain;
+
+    const int num_hdr_channels = 4;
+    hdr_meta_msg.hdr_exposure_us.resize(num_hdr_channels);
+    hdr_meta_msg.hdr_gain.resize(num_hdr_channels);
+
+    for (int hdr_channel = 0; hdr_channel < num_hdr_channels; hdr_channel++) {
+      hdr_meta_msg.hdr_exposure_us[hdr_channel] =
+          currentHdrExposure(hdr_channel);
+      hdr_meta_msg.hdr_gain[hdr_channel] = currentHdrGain(hdr_channel);
+    }
+
+    hdr_metadata_pub_.publish(hdr_meta_msg);
+  }
 }
 
 void ArenaCameraStreamingNodelet::reconfigureCallback(ArenaCameraConfig &config,
