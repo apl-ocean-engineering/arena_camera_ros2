@@ -228,8 +228,7 @@ bool ArenaCameraNodeletBase::registerCameraByAuto() {
       pDevice_ = pSystem_->CreateDevice(dev);
       NODELET_INFO_STREAM(
           "Connecting to first autodetected Lucid Vision camera: Serial Number "
-          << deviceInfos[0].SerialNumber()
-          << " ; User ID: " << deviceInfos[0].UserDefinedName());
+          << dev.SerialNumber() << " ; User ID: " << dev.UserDefinedName());
       return true;
     }
   }
