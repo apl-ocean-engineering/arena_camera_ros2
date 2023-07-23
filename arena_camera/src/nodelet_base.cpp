@@ -135,6 +135,16 @@ void ArenaCameraNodeletBase::onInit() {
     }
   }
 
+  // Validate that the camera is from Lucid (otherwise the Arena SDK
+  // will segfault)
+  const auto device_vendor_name = Arena::GetNodeValue<GenICam::gcstring>(
+      pDevice_->GetNodeMap(), "DeviceVendorName");
+  if (device_vendor_name != "Lucid Vision Labs") {
+    NODELET_FATAL_STREAM(
+        "Hm, this doesn't appear to be a Lucid Vision camera, got vendor name: "
+        << device_vendor_name);
+  }
+
   if (!configureCamera()) {
     NODELET_FATAL_STREAM("Unable to configure camera");
     return;
@@ -213,11 +223,18 @@ bool ArenaCameraNodeletBase::registerCameraByAuto() {
                             << dev.UserDefinedName());
   }
 
-  NODELET_INFO_STREAM("Connecting to first autodetected camera: Serial Number "
-                      << deviceInfos[0].SerialNumber()
-                      << " ; User ID: " << deviceInfos[0].UserDefinedName());
-  pDevice_ = pSystem_->CreateDevice(deviceInfos[0]);
-  return true;
+  for (auto &dev : deviceInfos) {
+    if (dev.VendorName() == "Lucid Vision Labs") {
+      pDevice_ = pSystem_->CreateDevice(dev);
+      NODELET_INFO_STREAM(
+          "Connecting to first autodetected Lucid Vision camera: Serial Number "
+          << deviceInfos[0].SerialNumber()
+          << " ; User ID: " << deviceInfos[0].UserDefinedName());
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool ArenaCameraNodeletBase::configureCamera() {
@@ -591,13 +608,14 @@ bool ArenaCameraNodeletBase::setImageEncoding(const std::string &ros_encoding) {
   return true;
 }
 
+// Note that streaming must be stopped before updating frame rate
 void ArenaCameraNodeletBase::updateFrameRate() {
   try {
     ros::NodeHandle nh = getNodeHandle();
     auto pNodeMap = pDevice_->GetNodeMap();
 
-    const bool was_streaming = is_streaming_;
-    stopStreaming();
+    // const bool was_streaming = is_streaming_;
+    // stopStreaming();
 
     auto cmdlnParamFrameRate = arena_camera_parameter_set_.frameRate();
     auto currentFrameRate =
@@ -650,7 +668,7 @@ void ArenaCameraNodeletBase::updateFrameRate() {
         << Arena::GetNodeValue<double>(pNodeMap, "AcquisitionFrameRate")
         << " Hz");
 
-    if (was_streaming) startStreaming();
+    // if (was_streaming) startStreaming();
 
   } catch (GenICam::GenericException &e) {
     NODELET_INFO_STREAM("Exception while changing frame rate: " << e.what());
@@ -1099,7 +1117,8 @@ bool ArenaCameraNodeletBase::setGamma(const float &target_gamma) {
 
   GenApi::CFloatPtr pGamma = pDevice_->GetNodeMap()->GetNode("Gamma");
   if (!pGamma || !GenApi::IsWritable(pGamma)) {
-    return true;
+    NODELET_WARN("Cannot set gamma, it is not writeable");
+    return false;
   } else {
     try {
       float gamma_to_set = target_gamma;
@@ -1260,8 +1279,22 @@ void ArenaCameraNodeletBase::enableLUT(bool enable) {
 //
 
 void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
-                                                 uint32_t level) {
+                                                 uint32_t level_int) {
+  // This enum must match the values in the .cfg (can I get these
+  // programmatically?)
+  enum class DynCfgLevel : int {
+    ChangeWhileStreaming = 0,
+    MustHaltStreaming = 1
+  };
+  const auto level = static_cast<DynCfgLevel>(level_int);
+
   NODELET_INFO_STREAM("In reconfigureCallback");
+
+  const bool was_streaming = is_streaming_;
+
+  if (level == DynCfgLevel::MustHaltStreaming) {
+    stopStreaming();
+  }
 
   // -- The following params require stopping streaming, only set if needed --
   if (config.frame_rate != previous_config_.frame_rate) {
@@ -1304,6 +1337,10 @@ void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
 
   arena_camera_parameter_set_.gamma_ = config.gamma;
   setGamma(arena_camera_parameter_set_.gamma_);
+
+  if ((level == DynCfgLevel::MustHaltStreaming) && was_streaming) {
+    startStreaming();
+  }
 
   // Save config
   previous_config_ = config;
