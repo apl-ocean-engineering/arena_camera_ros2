@@ -1114,6 +1114,8 @@ bool ArenaCameraNodeletBase::setGamma(const float &target_gamma) {
             "Desired gamma unreachable! Setting to upper limit: "
             << gamma_to_set);
       }
+
+      NODELET_INFO_STREAM("Setting gamma to " << gamma_to_set);
       pGamma->SetValue(gamma_to_set);
 
     } catch (const GenICam::GenericException &e) {
@@ -1206,6 +1208,38 @@ float ArenaCameraNodeletBase::calcCurrentBrightness() {
 }
 
 //-------------------------------------------------------------------
+//
+// HDR Channel Query and set functions
+//
+float ArenaCameraNodeletBase::currentHdrGain(int channel) {
+  try {
+    Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(),
+                                 "HDRTuningChannelSelector", channel);
+
+    return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(),
+                                       "HDRChannelAnalogGain");
+  } catch (const GenICam::GenericException &e) {
+    NODELET_ERROR_STREAM(
+        "Exception while querying HDR gain: " << e.GetDescription());
+    return -1;
+  }
+}
+
+float ArenaCameraNodeletBase::currentHdrExposure(int channel) {
+  try {
+    Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(),
+                                 "HDRTuningChannelSelector", channel);
+
+    return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(),
+                                       "HDRChannelExposureTime");
+  } catch (const GenICam::GenericException &e) {
+    NODELET_ERROR_STREAM(
+        "Exception while querying HDR exposure time: " << e.GetDescription());
+    return -1;
+  }
+}
+
+//-------------------------------------------------------------------
 // Functions for dealing with LUT
 //
 // \todo{amarburg}  Very simple right now
@@ -1268,39 +1302,11 @@ void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
   }
   // }
 
+  arena_camera_parameter_set_.gamma_ = config.gamma;
+  setGamma(arena_camera_parameter_set_.gamma_);
+
   // Save config
   previous_config_ = config;
-}
-
-//
-// HDR Query and set functions
-//
-float ArenaCameraNodeletBase::currentHdrGain(int channel) {
-  try {
-    Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(),
-                                 "HDRTuningChannelSelector", channel);
-
-    return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(),
-                                       "HDRChannelAnalogGain");
-  } catch (const GenICam::GenericException &e) {
-    NODELET_ERROR_STREAM(
-        "Exception while querying HDR gain: " << e.GetDescription());
-    return -1;
-  }
-}
-
-float ArenaCameraNodeletBase::currentHdrExposure(int channel) {
-  try {
-    Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(),
-                                 "HDRTuningChannelSelector", channel);
-
-    return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(),
-                                       "HDRChannelExposureTime");
-  } catch (const GenICam::GenericException &e) {
-    NODELET_ERROR_STREAM(
-        "Exception while querying HDR exposure time: " << e.GetDescription());
-    return -1;
-  }
 }
 
 //------------------------------------------------------------------------

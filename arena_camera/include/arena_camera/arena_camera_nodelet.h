@@ -182,8 +182,8 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
   //  exposure** allowed
   //                   for the auto-exposure algorithm
   void setExposure(AutoExposureMode exp_mode, float exposure_ms);
-
   float currentExposure();
+
   //==== Functions to get/set gain ====
 
   enum class AutoGainMode : int { Off = 0, Once = 1, Continuous = 2 };
@@ -197,7 +197,6 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @return true if the targeted gain could be reached
    */
   bool setGain(AutoGainMode gain_mode, float target_gain = 0.0);
-
   float currentGain();
 
   //==== Functions to get/set gamma ====
@@ -208,7 +207,6 @@ class ArenaCameraNodeletBase : public nodelet::Nodelet {
    * @return true if the targeted gamma could be reached
    */
   bool setGamma(const float &target_gamma);
-
   float currentGamma();
 
   //===== Functions for querying HDR channels (IMX490 only)
