@@ -29,15 +29,15 @@
 
 // STD
 #include <algorithm>
+#include <boost/multi_array.hpp>
 #include <cmath>
 #include <cstring>
 #include <string>
 #include <vector>
 
 // ROS
+#include <dynamic_reconfigure/SensorLevels.h>
 #include <sensor_msgs/RegionOfInterest.h>
-
-#include "boost/multi_array.hpp"
 
 // Arena
 #include <ArenaApi.h>
@@ -1278,22 +1278,17 @@ void ArenaCameraNodeletBase::enableLUT(bool enable) {
 //
 
 void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
-                                                 uint32_t level_int) {
-  // This enum must match the values in the .cfg (can I get these
-  // programmatically?)
-  enum class DynCfgLevel : int {
-    ChangeWhileStreaming = 0,
-    MustHaltStreaming = 1
-  };
-  const auto level = static_cast<DynCfgLevel>(level_int);
-
-  NODELET_INFO_STREAM("In reconfigureCallback");
+                                                 uint32_t level) {
+  const auto stop_level =
+      (uint32_t)dynamic_reconfigure::SensorLevels::RECONFIGURE_STOP;
 
   const bool was_streaming = is_streaming_;
-
-  if (level == DynCfgLevel::MustHaltStreaming) {
+  if (level >= stop_level) {
+    ROS_INFO("Stopping sensor for reconfigure");
     stopStreaming();
   }
+
+  NODELET_INFO_STREAM("In reconfigureCallback");
 
   // -- The following params require stopping streaming, only set if needed --
   if (config.frame_rate != previous_config_.frame_rate) {
@@ -1337,7 +1332,7 @@ void ArenaCameraNodeletBase::reconfigureCallback(ArenaCameraConfig &config,
   arena_camera_parameter_set_.gamma_ = config.gamma;
   setGamma(arena_camera_parameter_set_.gamma_);
 
-  if ((level == DynCfgLevel::MustHaltStreaming) && was_streaming) {
+  if ((level >= stop_level) && was_streaming) {
     startStreaming();
   }
 
