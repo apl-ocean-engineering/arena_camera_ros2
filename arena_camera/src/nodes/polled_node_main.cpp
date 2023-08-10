@@ -27,24 +27,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-/* Authors: debout@magazino.eu
- *          grimm@magazino.eu
- *          engelhard@magazino.eu
- */
+#include "arena_camera/arena_camera_nodes.h"
 
-// ROS
-#include <nodelet/loader.h>
-#include <ros/ros.h>
-
-int main(int argc, char **argv) {
-  ros::init(argc, argv, "arena_camera_node");
-
-  nodelet::Loader nodelet;
-  nodelet::M_string remap(ros::names::getRemappings());
-  nodelet::V_string nargv;
-  std::string nodelet_name = ros::this_node::getName();
-  nodelet.load(nodelet_name, "arena_camera/ArenaCameraPolledNodelet", remap,
-               nargv);
-  ros::spin();
+int main(int argc, char *argv[]) {
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<arena_camera::ArenaCameraPolledNode>());
+  rclcpp::shutdown();
   return 0;
 }

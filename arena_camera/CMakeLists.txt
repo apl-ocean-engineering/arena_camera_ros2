@@ -3,7 +3,6 @@ project(arena_camera)
 
 set(CMAKE_CXX_STANDARD 14)
 
-
 #
 # ARENA SDK
 #
@@ -18,11 +17,18 @@ if (NOT ${arena_sdk_FOUND})
     include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Findarena_sdk.cmake")
 endif()
 
+set(THIS_PACKAGE_INCLUDE_DEPENDS
+  rclcpp
+  rclcpp_components
+  ament_cmake
+  camera_control_msgs
+  imaging_msgs
+)
 
-find_package(rclcpp REQUIRED)
+foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
+  find_package(${Dependency} REQUIRED)
+endforeach()
 
-find_package(camera_control_msgs REQUIRED)
-find_package(imaging_msgs REQUIRED)
 
 
 #
@@ -101,34 +107,72 @@ find_package(imaging_msgs REQUIRED)
 
 
 #  flags for all C++ targets
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(arena_camera_lib ${PROJECT_NAME})
 
-set(arena_camera_lib_name ${PROJECT_NAME})
-
-add_library( ${arena_camera_lib_name}
+add_library( ${arena_camera_lib}
+    SHARED
     src/encoding_conversions.cpp
     src/arena_camera_parameter.cpp
-    src/nodelet_base.cpp
-    src/polled_nodelet.cpp
-    src/streaming_nodelet.cpp
+    src/base_node.cpp
+    src/polled_node.cpp
+    src/streaming_node.cpp
 )
 
-target_include_directories( ${arena_camera_lib_name}
-    PRIVATE ${catkin_INCLUDE_DIRS}
+ament_target_dependencies(${arena_camera_lib} ${THIS_PACKAGE_INCLUDE_DEPENDS})
+target_include_directories( ${arena_camera_lib}
     PRIVATE ${arena_sdk_INCLUDE_DIRS}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries( ${arena_camera_lib_name}
-    ${catkin_LIBRARIES}
+target_link_libraries( ${arena_camera_lib}
     ${arena_sdk_LIBRARIES}
 )
 
-ament_target_dependencies(${arena_camera_lib_name}
-    rclcpp
-    camera_control_msgs
-    imaging_msgs
+rclcpp_components_register_nodes(${arena_camera_lib} "arena_camera::ArenaCameraPolledNode")
+rclcpp_components_register_nodes(${arena_camera_lib} "arena_camera::ArenaCameraStreamingNode")
+
+## Build stand-alone executables
+foreach(Executable IN ITEMS polled_node streaming_node)
+
+  add_executable(${Executable} src/nodes/${Executable}_main.cpp)
+
+  target_include_directories( ${Executable}
+      PRIVATE ${arena_sdk_INCLUDE_DIRS}
+      PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+  )
+
+  target_link_libraries(${Executable} ${arena_camera_lib})
+
+endforeach()
+
+
+# Install
+install(
+  TARGETS ${arena_camera_lib}
+  DESTINATION lib/${PROJECT_NAME}
 )
+
+# install(DIRECTORY
+#   include/
+#   DESTINATION include
+# )
+
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+
+  # Run linters found in package.xml except those below
+#   set(ament_cmake_copyright_FOUND TRUE)
+#   set(ament_cmake_uncrustify_FOUND TRUE)
+#   set(ament_cmake_pep257_FOUND TRUE)
+#   set(ament_cmake_flake8_FOUND TRUE)
+
+  ament_lint_auto_find_test_dependencies()
+endif()
 
 
 # #

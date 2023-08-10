@@ -1,6 +1,8 @@
 /******************************************************************************
- * Software License Agreement (BSD License)
+ * Copyright (C) 2023 University of Washington
  *
+ * based on the arena_camera_ros driver released under the BSD License:
+ * Copyright (C) 2021, Lucidvision Labs
  * Copyright (C) 2016, Magazino GmbH. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +12,7 @@
  *   * Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- *   * Neither the names of Magazino GmbH nor the names of its
+ *   * Neither the names of Copyright Holders nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
  *
@@ -27,14 +29,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-// ROS
-#include <ros/ros.h>
-#include <sensor_msgs/image_encodings.h>
+#include "arena_camera/encoding_conversions.h"
+
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/image_encodings.hpp>
 
 #include "arena_camera/arena_image_encodings.h"
-
-// Arena node
-#include <arena_camera/encoding_conversions.h>
 
 namespace arena_camera {
 namespace encoding_conversions {
