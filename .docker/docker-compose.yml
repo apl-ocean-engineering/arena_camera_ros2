@@ -5,13 +5,11 @@ services:
   arena_camera:
     build:
       dockerfile: Dockerfile
-    image: "registry.gitlab.com/apl-ocean-engineering/arena_camera_ros2:latest"
+    image: registry.gitlab.com/apl-ocean-engineering/arena_camera_ros2:latest
     stdin_open: true
     tty: true
-    command: /bin/bash
     network_mode: host
     volumes:
       - type: bind
         source: ..
         target: /home/ros/ros_ws/src/arena_camera_ros2
-  

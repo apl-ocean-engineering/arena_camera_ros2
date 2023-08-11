@@ -47,7 +47,6 @@ ARG USERNAME=ros
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
-# Create the user
 RUN groupadd --gid $USER_GID $USERNAME \
   && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
   #
@@ -58,17 +57,15 @@ RUN groupadd --gid $USER_GID $USERNAME \
   && chmod 0440 /etc/sudoers.d/$USERNAME
 
 ## ~~ Switch to non-root user ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 USER $USERNAME
 
 # Install the default ROS entrypoint
 COPY --chmod=0755  ros2_entrypoint.sh /home/$USERNAME/ros2_entrypoint.sh
-#ENTRYPOINT [ "/home/ros/ros2_entrypoint.sh" ]
+ENTRYPOINT [ "/home/ros/ros2_entrypoint.sh" ]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  This build path clones from github
 FROM build_image as build_clone
-
 
 ARG WS_DIR=/home/$USERNAME/ros_ws
 ONBUILD WORKDIR ${WS_DIR}/src
@@ -80,20 +77,6 @@ ONBUILD RUN echo "Cloning from ${ARENA_CAMERA_ROS2_BRANCH} branch ${ARENA_CAMERA
 # This will break cache when the repo changes
 ONBUILD ADD https://api.github.com/repos/apl-ocean-engineering/arena_camera_ros2/git/refs/heads/${ARENA_CAMERA_ROS2_BRANCH} version.json
 ONBUILD RUN git clone -b ${ARENA_CAMERA_ROS2_BRANCH} ${ARENA_CAMERA_ROS2_REPO}
-
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# This build path copies from a local tree
-#
-# I find the structure of the arena_camera_ros drive extremely annoying and
-# can see changing away from it.
-# FROM build_image as build_local
-
-# ARG LOCAL_SRC=local_src
-
-# ARG WS_DIR
-# ONBUILD WORKDIR ${WS_DIR}/src
-# ONBUILD RUN echo "Pulling source code from local directory ${LOCAL_SRC}"
-# ONBUILD COPY ${LOCAL_SRC}/ ${WS_DIR}/src/
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Then the two build paths re-merge here
@@ -123,4 +106,4 @@ RUN bash -c "~/ros2_entrypoint.sh \
 
 # Convert ARG to ENV
 ENV ROS_WS ${WS_DIR}
-#CMD ["ros2", "launch", "arena_camera", "streaming_node.launch"]
+CMD ["ros2", "launch", "arena_camera", "streaming_node.launch"]
