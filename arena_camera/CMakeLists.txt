@@ -30,11 +30,6 @@ foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
 endforeach()
 
 
-
-#
-# CATKIN
-#
-
 # set(CATKIN_COMPONENTS
 #      actionlib
 #      camera_control_msgs # arena_camera depends on this upper custom msg package
@@ -51,59 +46,6 @@ endforeach()
 #      nodelet
 #      imaging_msgs
 # )
-
-# find_package(
-#     catkin
-#         REQUIRED
-#     COMPONENTS
-#         ${CATKIN_COMPONENTS}
-# )
-
-# catkin_python_setup()
-
-#
-# Generate dynamic reconfigure files
-#
-# generate_dynamic_reconfigure_options(
-#   cfg/ArenaCamera.cfg
-# )
-
-# # http://wiki.ros.org/catkin/CMakeLists.txt#catkin_package.28.29
-# catkin_package(
-#     INCLUDE_DIRS
-#         include
-#     LIBRARIES
-#         ${PROJECT_NAME}
-#     CATKIN_DEPENDS
-#         ${CATKIN_COMPONENTS} # package dep for build/run
-#     # DEPENDS # sys dep for build/run
-#     #    <>
-#     #    <>
-# )
-
-#7
-# ROS CHECKS
-#
-
-# set(ROSLINT_CPP_OPTS
-#    "--extensions=cpp,h,hpp" "--filter=-runtime/references,-readability/todo,-build/include_what_you_use"
-# )
-
-# # check c/c++ static checking. More http://wiki.ros.org/roslint
-# # no files mean all files
-# roslint_cpp( # all .h .cpp files
-# )
-
-# # closest doc (http://wiki.ros.org/rosbuild/CMakeLists#rosbuild_add_roslaunch_check)
-# # more https://answers.ros.org/question/200359/purpose-of-roslaunch_add_file_check/
-# roslaunch_add_file_check(launch)
-
-
-# -----------------------------------------------------------------------------
-#
-# 8
-#
-# -----------------------------------------------------------------------------
 
 
 #  flags for all C++ targets

@@ -1,12 +1,7 @@
 #!/bin/bash
-#set -e
+set -e
 
 ROS_VERSION=${ROS_VERSION:-iron}
-
-# if [ -f $HOME/.ROS_WS ]; then
-#     echo "Loading catkin ws from $HOME/.ROS_WS"
-#     source $HOME/.ROS_WS
-# fi
 
 # setup ros environment
 if [ "${ROS_WS}" == "" ]; then
@@ -14,7 +9,7 @@ if [ "${ROS_WS}" == "" ]; then
     source /opt/ros/$ROS_VERSION/setup.bash
 else
     echo "Loading environment from workspace: $ROS_WS"
-    source $ROS_WS/devel/setup.bash
+    source $ROS_WS/install/setup.bash
 fi
 
 exec "$@"

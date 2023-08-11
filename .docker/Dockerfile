@@ -1,8 +1,7 @@
 ARG BUILD_TYPE=clone
 ARG ROS_VERSION=iron
-ARG WS_DIR=/root/arena_ws
 
-## This should work through the magic of multi-arch?
+## This should work on both amd64 and arm64 through the magic of multi-arch?
 FROM ros:${ROS_VERSION}-perception AS build_image
 
 # This should be set automatically by the build engine
@@ -42,20 +41,40 @@ RUN ln -s /usr/local/ArenaSDK_* ${ARENA_ROOT}
 WORKDIR ${ARENA_ROOT}
 RUN sh -c "sudo sh Arena_SDK_*.conf"
 
+## ~~ Create non-root user ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ARG USERNAME=ros
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+# Create the user
+RUN groupadd --gid $USER_GID $USERNAME \
+  && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+  #
+  # [Optional] Add sudo support. Omit if you don't need to install software after connecting.
+  && apt-get update \
+  && apt-get install -y sudo \
+  && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+  && chmod 0440 /etc/sudoers.d/$USERNAME
+
+## ~~ Switch to non-root user ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+USER $USERNAME
+
 # Install the default ROS entrypoint
-WORKDIR /root
-COPY ros_entrypoint.sh /root/ros_entrypoint.sh
-ENTRYPOINT [ "/root/ros_entrypoint.sh" ]
+COPY --chmod=0755  ros2_entrypoint.sh /home/$USERNAME/ros2_entrypoint.sh
+#ENTRYPOINT [ "/home/ros/ros2_entrypoint.sh" ]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  This build path clones from github
 FROM build_image as build_clone
 
-ARG ARENA_CAMERA_ROS2_REPO=https://github.com/apl-ocean-engineering/arena_camera_ros2.git
-ARG ARENA_CAMERA_ROS2_BRANCH=main
 
-ARG WS_DIR
+ARG WS_DIR=/home/$USERNAME/ros_ws
 ONBUILD WORKDIR ${WS_DIR}/src
+
+ARG ARENA_CAMERA_ROS2_REPO=https://github.com/apl-ocean-engineering/arena_camera_ros2.git
+ARG ARENA_CAMERA_ROS2_BRANCH=master
 ONBUILD RUN echo "Cloning from ${ARENA_CAMERA_ROS2_BRANCH} branch ${ARENA_CAMERA_ROS2_REPO}"
 
 # This will break cache when the repo changes
@@ -67,19 +86,21 @@ ONBUILD RUN git clone -b ${ARENA_CAMERA_ROS2_BRANCH} ${ARENA_CAMERA_ROS2_REPO}
 #
 # I find the structure of the arena_camera_ros drive extremely annoying and
 # can see changing away from it.
-FROM build_image as build_local
+# FROM build_image as build_local
 
-ARG LOCAL_SRC=local_src
+# ARG LOCAL_SRC=local_src
 
-ARG WS_DIR
-ONBUILD WORKDIR ${WS_DIR}/src
-ONBUILD RUN echo "Pulling source code from local directory ${LOCAL_SRC}"
-ONBUILD COPY ${LOCAL_SRC}/ ${WS_DIR}/src/
+# ARG WS_DIR
+# ONBUILD WORKDIR ${WS_DIR}/src
+# ONBUILD RUN echo "Pulling source code from local directory ${LOCAL_SRC}"
+# ONBUILD COPY ${LOCAL_SRC}/ ${WS_DIR}/src/
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Then the two build paths re-merge here
 # dockerfile_lint - ignore
 FROM build_${BUILD_TYPE}
+
+ARG WS_DIR
 LABEL Version=0.1
 LABEL Name=arena_camera_ros2
 
@@ -96,11 +117,10 @@ WORKDIR ${WS_DIR}
 #                     --from-paths src/ \
 #               && rm -rf /var/lib/apt/lists/*"
 
-RUN bash -c "/root/ros_entrypoint.sh \
+RUN bash -c "~/ros2_entrypoint.sh \
                 colcon build && \
                 colcon test"
 
 # Convert ARG to ENV
 ENV ROS_WS ${WS_DIR}
-#RUN echo "ROS_WS=${ROS_WS}" > /root/.ROS_WS
-CMD ["ros", "launch", "arena_camera", "arena_camera_nodelet.launch"]
+#CMD ["ros2", "launch", "arena_camera", "streaming_node.launch"]
