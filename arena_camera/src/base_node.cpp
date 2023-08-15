@@ -67,21 +67,16 @@ ArenaCameraBaseNode::ArenaCameraBaseNode(const std::string &node_name,
       is_streaming_(false)
 // arena_camera_parameter_set_(),
 // set_user_output_srvs_(),
-// it_(nullptr),
-// img_raw_pub_(),
 // pinhole_model_(),
-// camera_info_manager_(nullptr),
 // sampling_indices_()
 {
-  //   metadata_pub_ =
-  //       nh.advertise<imaging_msgs::ImagingMetadata>("imaging_metadata",
-  //       1);
+  img_raw_pub_ = image_transport::create_camera_publisher(this, "image_raw");
+  camera_info_manager_ =
+      std::make_shared<camera_info_manager::CameraInfoManager>(this,
+                                                               "camera_info");
 
-  //   it_.reset(new image_transport::ImageTransport(nh));
-  //   img_raw_pub_ = it_->advertiseCamera("image_raw", 1);
-
-  //   camera_info_manager_ = new
-  //   camera_info_manager::CameraInfoManager(nh);
+  metadata_pub_ = this->create_publisher<imaging_msgs::msg::ImagingMetadata>(
+      "imaging_metadata", 1);
 
   //   diagnostics_updater_.setHardwareID("none");
   //   diagnostics_updater_.add("camera_availability", this,
@@ -110,14 +105,16 @@ ArenaCameraBaseNode::ArenaCameraBaseNode(const std::string &node_name,
     return;
   }
 
-  if (this->get_parameter("device_user_id", device_user_id)) {
+  if (this->get_parameter("device_user_id", device_user_id) &&
+      !device_user_id.empty()) {
     if (!registerCameraByUserId(device_user_id)) {
       RCLCPP_FATAL_STREAM(this->get_logger(),
                           "Unable to find a camera with DeviceUserId\""
                               << device_user_id << "\"");
       return;
     }
-  } else if (this->get_parameter("serial_number", serial_number)) {
+  } else if (this->get_parameter("serial_number", serial_number) &&
+             !serial_number.empty()) {
     if (!registerCameraBySerialNumber(serial_number)) {
       RCLCPP_FATAL_STREAM(
           this->get_logger(),
@@ -125,6 +122,9 @@ ArenaCameraBaseNode::ArenaCameraBaseNode(const std::string &node_name,
       return;
     }
   } else {
+    RCLCPP_WARN(this->get_logger(),
+                "Neither device_user_id nor serial_number supplied, attempting "
+                "to autodetect");
     if (!registerCameraByAuto()) {
       RCLCPP_FATAL(this->get_logger(),
                    "Unable to find any cameras to register");
@@ -142,6 +142,9 @@ ArenaCameraBaseNode::ArenaCameraBaseNode(const std::string &node_name,
         "Hm, this doesn't appear to be a Lucid Vision camera, got vendor name: "
             << device_vendor_name);
   }
+
+  // ~~ Now define all of the camera parameters ~~
+  param_subscriber_ = std::make_shared<rclcpp::ParameterEventHandler>(this);
 
   //   if (!configureCamera()) {
   //     Node_FATAL_STREAM("Unable to configure camera");
@@ -171,9 +174,9 @@ bool ArenaCameraBaseNode::registerCameraByUserId(
   std::vector<Arena::DeviceInfo> deviceInfos = pSystem_->GetDevices();
   rcpputils::assert_true(deviceInfos.size() > 0);
 
-  RCLCPP_INFO_STREAM(
-      this->get_logger(),
-      "Connecting to camera with DeviceUserId" << device_user_id_to_open);
+  RCLCPP_INFO_STREAM(this->get_logger(),
+                     "Connecting to camera with DeviceUserId \""
+                         << device_user_id_to_open << "\"");
 
   std::vector<Arena::DeviceInfo>::iterator it;
 
@@ -182,8 +185,8 @@ bool ArenaCameraBaseNode::registerCameraByUserId(
     // Must be an exact match
     if (0 == device_user_id_to_open.compare(device_user_id)) {
       RCLCPP_INFO_STREAM(this->get_logger(),
-                         "Found the desired camera with DeviceUserID "
-                             << device_user_id_to_open << ": ");
+                         "Found the desired camera with DeviceUserID \""
+                             << device_user_id_to_open << "\"");
 
       pDevice_ = pSystem_->CreateDevice(dev);
       return true;
@@ -233,12 +236,13 @@ bool ArenaCameraBaseNode::registerCameraByAuto() {
   rcpputils::assert_true(deviceInfos.size() > 0);
 
   int i = 0;
-  RCLCPP_DEBUG_STREAM(this->get_logger(),
-                      "Found " << deviceInfos.size() << " cameras");
+  RCLCPP_INFO_STREAM(this->get_logger(),
+                     "Found " << deviceInfos.size() << " cameras:");
   for (auto &dev : deviceInfos) {
-    RCLCPP_INFO_STREAM(this->get_logger(), i++ << ":  " << dev.SerialNumber()
-                                               << "  "
-                                               << dev.UserDefinedName());
+    RCLCPP_INFO_STREAM(this->get_logger(),
+                       i++ << ":  s/n: " << dev.SerialNumber()
+                           << "  User id: " << dev.UserDefinedName()
+                           << " vendor: " << dev.VendorName());
   }
 
   for (auto &dev : deviceInfos) {
@@ -246,8 +250,8 @@ bool ArenaCameraBaseNode::registerCameraByAuto() {
       pDevice_ = pSystem_->CreateDevice(dev);
       RCLCPP_INFO_STREAM(
           this->get_logger(),
-          "Connecting to first autodetected Lucid Vision camera: Serial Number "
-              << dev.SerialNumber() << " ; User ID: " << dev.UserDefinedName());
+          "Connecting to first autodetected Lucid Vision camera: s/n "
+              << dev.SerialNumber() << " User ID: " << dev.UserDefinedName());
       return true;
     }
   }

@@ -20,6 +20,10 @@
   <depend>rclcpp_components</depend>
   <depend>imaging_msgs</depend>
   <depend>camera_control_msgs</depend>
+  <depend>camera_info_manager</depend>
+  <depend>image_transport</depend>
+
+  <exec_depend>ros2launch</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
@@ -30,7 +34,7 @@
   <build_depend>cv_bridge</build_depend>
   <build_depend>diagnostic_updater</build_depend>
   <build_depend>image_geometry</build_depend>
-  <build_depend>image_transport</build_depend>
+
   <build_depend>arena_sdk</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>sensor_msgs</build_depend>

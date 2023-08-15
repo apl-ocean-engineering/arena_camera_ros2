@@ -33,10 +33,12 @@
 
 #pragma once
 
+#include <camera_info_manager/camera_info_manager.hpp>
+#include <image_transport/image_transport.hpp>
+#include <imaging_msgs/msg/imaging_metadata.hpp>
 #include <memory>
+#include <rclcpp/rclcpp.hpp>
 #include <string>
-
-#include "rclcpp/rclcpp.hpp"
 
 // ROS
 // #include <actionlib/server/simple_action_server.h>
@@ -53,13 +55,11 @@
 // #include <diagnostic_updater/publisher.h>
 // #include <dynamic_reconfigure/server.h>
 // #include <image_geometry/pinhole_camera_model.h>
-// #include <image_transport/image_transport.h>
 // #include <Node/Node.h>
-// #include <ros/ros.h>
 // #include <sensor_msgs/CameraInfo.h>
 // #include <sensor_msgs/image_encodings.h>
 
-// Arena
+// LucidVision Arena SDK
 #include <ArenaApi.h>
 
 // #include <arena_camera/arena_camera.h>
@@ -266,6 +266,14 @@ class ArenaCameraBaseNode : public rclcpp::Node {
 
   bool is_streaming_;
 
+  image_transport::CameraPublisher img_raw_pub_;
+  std::shared_ptr<camera_info_manager::CameraInfoManager> camera_info_manager_;
+
+  rclcpp::Publisher<imaging_msgs::msg::ImagingMetadata>::SharedPtr
+      metadata_pub_;
+
+  std::shared_ptr<rclcpp::ParameterEventHandler> param_subscriber_;
+
   // Hardware accessor functions
   // These might have originally been in arena_camera.h?
   // sensor_msgs::RegionOfInterest currentROI();
@@ -291,8 +299,6 @@ class ArenaCameraBaseNode : public rclcpp::Node {
 
   // // Don't like using this global member
   // sensor_msgs::Image img_raw_msg_;
-
-  // camera_info_manager::CameraInfoManager *camera_info_manager_;
 
   // std::vector<std::size_t> sampling_indices_;
   // // std::array<float, 256> brightness_exp_lut_;

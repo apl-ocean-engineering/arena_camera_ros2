@@ -62,6 +62,7 @@ USER $USERNAME
 # Install the default ROS entrypoint
 COPY --chmod=0755  ros2_entrypoint.sh /home/$USERNAME/ros2_entrypoint.sh
 ENTRYPOINT [ "/home/ros/ros2_entrypoint.sh" ]
+CMD ["/bin/bash"]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  This build path clones from github

@@ -22,6 +22,8 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   rclcpp_components
   ament_cmake
   camera_control_msgs
+  camera_info_manager
+  image_transport
   imaging_msgs
 )
 
@@ -52,57 +54,65 @@ endforeach()
 set(arena_camera_lib ${PROJECT_NAME})
 
 add_library( ${arena_camera_lib}
-    SHARED
     src/encoding_conversions.cpp
     src/arena_camera_parameter.cpp
     src/base_node.cpp
     src/polled_node.cpp
     src/streaming_node.cpp
 )
-
 ament_target_dependencies(${arena_camera_lib} ${THIS_PACKAGE_INCLUDE_DEPENDS})
+
 target_include_directories( ${arena_camera_lib}
     PRIVATE ${arena_sdk_INCLUDE_DIRS}
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+    "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
 )
 
 target_link_libraries( ${arena_camera_lib}
     ${arena_sdk_LIBRARIES}
 )
 
-rclcpp_components_register_nodes(${arena_camera_lib} "arena_camera::ArenaCameraPolledNode")
-rclcpp_components_register_nodes(${arena_camera_lib} "arena_camera::ArenaCameraStreamingNode")
+#set_target_properties(${arena_camera_lib} PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# rclcpp_components_register_nodes(${arena_camera_lib} "arena_camera::ArenaCameraPolledNode")
+# rclcpp_components_register_nodes(${arena_camera_lib} "arena_camera::ArenaCameraStreamingNode")
 
 ## Build stand-alone executables
 foreach(Executable IN ITEMS polled_node streaming_node)
 
   add_executable(${Executable} src/nodes/${Executable}_main.cpp)
-
   target_include_directories( ${Executable}
       PRIVATE ${arena_sdk_INCLUDE_DIRS}
       PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
 
   target_link_libraries(${Executable} ${arena_camera_lib})
-
 endforeach()
 
-
-# Install
-install(
-  TARGETS ${arena_camera_lib}
-  DESTINATION lib/${PROJECT_NAME}
+# Install launch files, library and executables
+install(DIRECTORY
+  include/
+  DESTINATION include
 )
 
-# install(DIRECTORY
-#   include/
-#   DESTINATION include
-# )
+install(
+  TARGETS ${arena_camera_lib}
+  EXPORT export_${PROJECT_NAME}
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib
+)
+
+install(TARGETS polled_node streaming_node
+    DESTINATION lib/${PROJECT_NAME}
+)
 
 install(DIRECTORY
   launch
   DESTINATION share/${PROJECT_NAME}/
 )
+
+ament_export_targets(export_${arena_camera_lib} HAS_LIBRARY_TARGET)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -118,32 +128,12 @@ endif()
 
 ament_package()
 
-# #
-# # ARENA_CAMERA_NODES
-# #
 
-# set(streaming_arena_camera_node streaming_arena_camera)
-# set(polled_arena_camera_node polled_arena_camera)
 
-# add_executable( ${streaming_arena_camera_node}
-#     src/nodes/streaming_node_main.cpp
-# )
-
-# add_executable( ${polled_arena_camera_node}
-#     src/nodes/polled_node_main.cpp
-# )
-
-# foreach( camera_node ${streaming_arena_camera_node} ${polled_arena_camera_node} )
-
-#     target_include_directories( ${camera_node}
-#         PRIVATE ${catkin_INCLUDE_DIRS}
-#     )
-
-#     target_link_libraries( ${camera_node}
-#         ${catkin_LIBRARIES}
-#     )
-
-# endforeach()
+##
+## !! ROS1 Cruft below.  To be removed when obsoleted
+##
+##
 
 
 #
