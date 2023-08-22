@@ -1,8 +1,12 @@
 ARG BUILD_TYPE=clone
 ARG ROS_VERSION=iron
 
+#====================================================================
+# Preliminary image with dependencies
+#====================================================================
+#
 ## This should work on both amd64 and arm64 through the magic of multi-arch?
-FROM ros:${ROS_VERSION}-perception AS build_image
+FROM ros:${ROS_VERSION}-perception AS deps_image
 
 # This should be set automatically by the build engine
 ARG TARGETPLATFORM
@@ -41,6 +45,12 @@ RUN ln -s /usr/local/ArenaSDK_* ${ARENA_ROOT}
 WORKDIR ${ARENA_ROOT}
 RUN sh -c "sudo sh Arena_SDK_*.conf"
 
+
+#====================================================================
+# Intermediate image with prereq steps for running in CI
+#====================================================================
+FROM deps_image as ci_image
+
 ## ~~ Create non-root user ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ARG USERNAME=ros
@@ -64,10 +74,10 @@ COPY --chmod=0755  ros2_entrypoint.sh /home/$USERNAME/ros2_entrypoint.sh
 ENTRYPOINT [ "/home/ros/ros2_entrypoint.sh" ]
 CMD ["/bin/bash"]
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Build final image, using pristine copy of this repo cloned from Github
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-FROM build_image as build_clone
+#====================================================================
+# Intermediate image with cloned Git repos
+#====================================================================
+FROM ci_image as build_clone
 
 ARG WS_DIR=/home/$USERNAME/ros_ws
 ONBUILD WORKDIR ${WS_DIR}/src
@@ -80,8 +90,9 @@ ONBUILD RUN echo "Cloning from ${ARENA_CAMERA_ROS2_BRANCH} branch ${ARENA_CAMERA
 ONBUILD ADD https://api.github.com/repos/apl-ocean-engineering/arena_camera_ros2/git/refs/heads/${ARENA_CAMERA_ROS2_BRANCH} version.json
 ONBUILD RUN git clone -b ${ARENA_CAMERA_ROS2_BRANCH} ${ARENA_CAMERA_ROS2_REPO}
 
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Then the two build paths re-merge here
+#====================================================================
+# Final image with built ROS2 packages
+#====================================================================
 # dockerfile_lint - ignore
 FROM build_${BUILD_TYPE}
 

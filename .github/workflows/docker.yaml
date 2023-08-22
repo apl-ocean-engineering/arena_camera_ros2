@@ -2,19 +2,20 @@
 name: Build Docker Images
 
 on:
-  # schedule:
-  #   - cron: "0 17 * * 6"
   push:
     branches:
       - main
+  workflow_dispatch:
   # pull_request:
   #   paths:
   #     - .docker/**
   #     - .github/workflows/docker.yaml
-  workflow_dispatch:
+  # schedule:
+  #   - cron: "0 17 * * 6"
+
 
 env:
-  PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'evan-palmer/blue') }}
+  PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'apl-ocean-engineering/arena_camera_ros2') }}
 
 jobs:
   build_docker:
@@ -51,9 +52,9 @@ jobs:
         uses: docker/build-push-action@v4.1.1
         with:
           context: .docker
-          file: Dockerfile
+          file: .docker/Dockerfile
           build-args: ROS_DISTRO=${{ matrix.ROS_DISTRO }}
-          target: build_image
+          target: ci_image
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           push: ${{ env.PUSH }}
@@ -62,7 +63,7 @@ jobs:
         uses: docker/build-push-action@v4.1.1
         with:
           context: .docker
-          file: Dockerfile
+          file: .docker/Dockerfile
           build-args: ROS_DISTRO=${{ matrix.ROS_DISTRO }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
