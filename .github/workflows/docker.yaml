@@ -38,14 +38,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
+
+
+      - name: Docker metadata for build image
         if: env.PUSH == 'true'
-        id: meta
+        id: ci_meta
         uses: docker/metadata-action@v4.6.0
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=${{ matrix.ROS_DISTRO }}-${{ github.job }}
+            type=raw,value=${{ matrix.ROS_DISTRO }}-ci
 
       - name: Build and push "build_image"
         uses: docker/build-push-action@v4.1.1
@@ -54,10 +56,20 @@ jobs:
           file: .docker/Dockerfile
           build-args: ROS_DISTRO=${{ matrix.ROS_DISTRO }}
           target: ci_image
-          tags:
-            - ${{ matrix.ROS_DISTRO }}-ci
+          tags: ${{ steps.ci_meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           push: ${{ env.PUSH }}
+
+
+
+      - name: Docker metadata for final image
+        if: env.PUSH == 'true'
+        id: meta
+        uses: docker/metadata-action@v4.6.0
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ matrix.ROS_DISTRO }}-${{ github.job }}
 
       - name: Build and push full image
         uses: docker/build-push-action@v4.1.1
@@ -65,8 +77,6 @@ jobs:
           context: .docker
           file: .docker/Dockerfile
           build-args: ROS_DISTRO=${{ matrix.ROS_DISTRO }}
-          tags:
-            - ${{ steps.meta.outputs.tags }}
-            - latest
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           push: ${{ env.PUSH }}
