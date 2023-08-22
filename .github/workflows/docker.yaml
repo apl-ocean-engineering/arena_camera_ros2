@@ -16,7 +16,8 @@ env:
   PUSH: ${{ (github.event_name != 'pull_request') && (github.repository == 'apl-ocean-engineering/arena_camera_ros2') }}
 
 jobs:
-  build_docker:
+
+  build_ci_image:
     strategy:
       fail-fast: false
       matrix:
@@ -37,10 +38,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-
+      - name: Only update CI image if Dockerfile has changed
+        id: docker-files-changed
+        uses: tj-actions/changed-files@v37
+        with:
+          files: |
+            .docker/**
+            .github/workflows/docker.yaml
 
       - name: Docker metadata for build image
-        if: env.PUSH == 'true'
+        if: env.PUSH == 'true' && steps.docker-files-changes.outputs.any_changed == 'true'
         id: ci_meta
         uses: docker/metadata-action@v4.6.0
         with:
@@ -49,6 +56,7 @@ jobs:
             type=raw,value=${{ matrix.ROS_DISTRO }}-ci
 
       - name: Build and push "build_image"
+        if: env.PUSH == 'true' && steps.docker-files-changes.outputs.any_changed == 'true'
         uses: docker/build-push-action@v4.1.1
         with:
           context: .docker
@@ -60,6 +68,27 @@ jobs:
           push: ${{ env.PUSH }}
 
 
+  build_final:
+    strategy:
+      fail-fast: false
+      matrix:
+        ROS_DISTRO: [iron]
+    runs-on: ubuntu-latest
+    needs: build_ci_image
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log into registry
+        if: env.PUSH == 'true'
+        uses: docker/login-action@v2.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Docker metadata for final image
         if: env.PUSH == 'true'
