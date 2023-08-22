@@ -6,7 +6,7 @@ ARG ROS_VERSION=iron
 #====================================================================
 #
 ## This should work on both amd64 and arm64 through the magic of multi-arch?
-FROM ros:${ROS_VERSION}-perception AS deps_image
+FROM ros:${ROS_VERSION}-perception AS deps
 
 # This should be set automatically by the build engine
 ARG TARGETPLATFORM
@@ -49,7 +49,7 @@ RUN sh -c "sudo sh Arena_SDK_*.conf"
 #====================================================================
 # Intermediate image with prereq steps for running in CI
 #====================================================================
-FROM deps_image as ci_image
+FROM deps as ci
 
 ## ~~ Create non-root user ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -77,7 +77,7 @@ CMD ["/bin/bash"]
 #====================================================================
 # Intermediate image with cloned Git repos
 #====================================================================
-FROM ci_image as build_clone
+FROM ci as build_clone
 
 ARG WS_DIR=/home/$USERNAME/ros_ws
 ONBUILD WORKDIR ${WS_DIR}/src
@@ -94,7 +94,7 @@ ONBUILD RUN git clone -b ${ARENA_CAMERA_ROS2_BRANCH} ${ARENA_CAMERA_ROS2_REPO}
 # Final image with built ROS2 packages
 #====================================================================
 # dockerfile_lint - ignore
-FROM build_${BUILD_TYPE}
+FROM build_${BUILD_TYPE} as arena_camera_ros2
 
 ARG WS_DIR
 LABEL Version=0.1
