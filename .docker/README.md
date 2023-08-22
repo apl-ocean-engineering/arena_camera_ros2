@@ -17,7 +17,7 @@ To build the base Docker image:
 docker compose build
 ```
 
-To start an instance **with the local repository bind-mounted as ~/ws/src/arena_camera_ros2**
+To start an instance **with the local repository bind-mounted as ~/ros_ws/src/arena_camera_ros2**
 
 ```
 docker compose run arena_camera /bin/bash
