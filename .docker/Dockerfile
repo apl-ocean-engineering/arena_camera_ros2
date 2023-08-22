@@ -119,4 +119,4 @@ RUN bash -c "~/ros2_entrypoint.sh \
 
 # Convert ARG to ENV
 ENV ROS_WS ${WS_DIR}
-CMD ["ros2", "launch", "arena_camera", "streaming_node.launch"]
+CMD ["ros2", "launch", "arena_camera", "streaming_arena_camera.launch.py"]
