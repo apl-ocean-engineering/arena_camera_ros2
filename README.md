@@ -1,27 +1,31 @@
-## Arena Camera Driver for ROS1
+## Arena Camera Driver for ROS2
 
-This repo contains a ROS1 driver for Lucidvision machine vision camera using their ["Arena" SDK for Ubuntu](https://thinklucid.com/downloads-hub/).
+**Project Status:**  This software is a work in progress.  At present it is an in-progrss port of our [ROS1 LucidVision Driver](https://github.com/apl-ocean-engineering/arena_camera_ros) driver and is not feature-complete.
 
-This particular version is forked from the upstream [Arena Camera Driver](https://github.com/lucidvisionlabs/arena_camera_ros) from LucidVision and contains significant refactoring for functionality / readability.
+This repo is a ROS2 driver for LucidVision machine vision camera using their ["Arena" SDK for Ubuntu](https://thinklucid.com/downloads-hub/).
+
+This particular version is forked from the upstream [driver published by LucidVision](https://github.com/lucidvisionlabs/arena_camera_ros2) and includes significant refactoring for functionality / readability.
+
 # Getting Started
 
-See the full instructions at Lucid:  https://support.thinklucid.com/using-ros-for-linux/
+This package builds as a standard ROS2 package using `colcon`, however the [Arena SDK](https://thinklucid.com/downloads-hub/) must be installed.
 
-This package builds in the same way as other `catkin` ROS packages, however the [Arena SDK](https://thinklucid.com/downloads-hub/) must be installed.  See the [documentation at LucidVision](https://support.thinklucid.com/using-ros-for-linux/) for additional details.
+See the [ROS2 documentation at LucidVision](https://support.thinklucid.com/using-ros2-for-linux/) for additional details on installing the SDK.
 
+# Getting Started -- with Docker
 
-# ROS Packages
+A full Dockerfile is included in the [.docker](.docker/) directory.  See the [README in that directory](.docker/README.md) for more details.
+
+# Contents
 
 This repo contains two ROS packages.  See the individual READMEs for each for details.
 
-## camera_control_msgs
+* **camera_control_msgs**:  Contains actions and service calls for adjusting camera settings (gain, etc).
 
-Contains actions and service calls for adjusting camera settings (gain, etc).
+* **arena_camera**:  A "generic" ROS node for Lucid cameras.  See the [README](arena_camera/README) in this package for more details.
 
-## arena_camera
 
-A "generic" ROS node for Lucid cameras.  See the [README](arena_camera/README) in this package for more details.
 
 # License
 
-This code is forked from the [Lucid Vision's ROS node](https://github.com/lucidvisionlabs/arena_camera_ros), which in turn is forked from [Basler's ROS node for their Pylon library](https://github.com/magazino/pylon_camera), which is released under the [BSD 3-Clause License](LICENSE).
+This code is forked from the [Lucid Vision's ROS2 node](https://github.com/lucidvisionlabs/arena_camera_ros2), which in turn is forked from [Basler's ROS node for their Pylon library](https://github.com/magazino/pylon_camera), which is released under the [BSD 3-Clause License](LICENSE).

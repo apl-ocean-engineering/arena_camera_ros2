@@ -6,7 +6,7 @@ FROM ros:${ROS_VERSION}-perception AS build_image
 
 # This should be set automatically by the build engine
 ARG TARGETPLATFORM
-ARG ARENA_SDK_URL_BASE=https://s3.us-west-1.wasabisys.com/marburg/LucidVision_SDK
+ARG ARENA_SDK_URL_BASE=https://s3.us-east-1.wasabisys.com/amarburg-east/LucidVision_SDK
 
 # Install the LucidVision SDK
 WORKDIR /tmp
@@ -20,9 +20,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN if [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
-      ARENA_SDK_FILE=ArenaSDK_v0.1.68_Linux_x64.tar.bz2; \
+      ARENA_SDK_FILE=ArenaSDK_v0.1.68_Linux_x64.tar.gz; \
     elif [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
-      ARENA_SDK_FILE=ArenaSDK_v0.1.49_Linux_ARM64.tar.bz2; \
+      ARENA_SDK_FILE=ArenaSDK_v0.1.49_Linux_ARM64.tar.gz; \
     else \
       echo "Unknown target platform ${TARGETPLATFORM}"; \
       exit; \
@@ -31,7 +31,7 @@ RUN if [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
     echo "Downloading ${ARENA_SDK_URL}" && \
     wget $ARENA_SDK_URL && \
     cd /usr/local && \
-    tar -xjvf /tmp/$ARENA_SDK_FILE && \
+    tar -xf /tmp/$ARENA_SDK_FILE && \
     rm /tmp/$ARENA_SDK_FILE
 
 ENV ARENA_ROOT=/usr/local/ArenaSDK
@@ -65,7 +65,8 @@ ENTRYPOINT [ "/home/ros/ros2_entrypoint.sh" ]
 CMD ["/bin/bash"]
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#  This build path clones from github
+# Build final image, using pristine copy of this repo cloned from Github
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 FROM build_image as build_clone
 
 ARG WS_DIR=/home/$USERNAME/ros_ws
