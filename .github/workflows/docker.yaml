@@ -49,25 +49,25 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       #
-      # Build CI complete image
+      # Build CI image
       #
       - name: Docker metadata for build image
         if: env.PUSH == 'true'
         id: ci_meta
         uses: docker/metadata-action@v4.6.0
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.repository }}/ci
           tags: |
-            type=raw,value=${{ matrix.ROS_DISTRO }}-ci
+            type=raw,value=${{ matrix.ROS_DISTRO }}
 
-      - name: Build and push "build_image"
+      - name: Build and push the build stage "ci"
         if: env.PUSH == 'true'
         uses: docker/build-push-action@v4.1.1
         with:
           context: .docker
           file: .docker/Dockerfile
           build-args: ROS_DISTRO=${{ matrix.ROS_DISTRO }}
-          target: ci_image
+          target: ci
           tags: ${{ steps.ci_meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           push: ${{ env.PUSH }}
