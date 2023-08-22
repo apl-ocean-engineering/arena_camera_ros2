@@ -47,13 +47,23 @@ jobs:
           tags: |
             type=raw,value=${{ matrix.ROS_DISTRO }}-${{ github.job }}
 
-      - name: Build and push Docker image
+      - name: Build and push "build_image"
         uses: docker/build-push-action@v4.1.1
         with:
           context: .
           file: .docker/Dockerfile
           build-args: ROS_DISTRO=${{ matrix.ROS_DISTRO }}
-          target: ${{ github.job }}
+          target: build_image
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: ${{ env.PUSH }}
+
+      - name: Build and push full image
+        uses: docker/build-push-action@v4.1.1
+        with:
+          context: .
+          file: .docker/Dockerfile
+          build-args: ROS_DISTRO=${{ matrix.ROS_DISTRO }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           push: ${{ env.PUSH }}
