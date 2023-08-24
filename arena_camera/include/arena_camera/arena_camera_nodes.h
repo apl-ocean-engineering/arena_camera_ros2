@@ -102,8 +102,13 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   //   return arena_camera_parameter_set_.cameraFrame();
   // }
 
-  // void startStreaming();
-  // void stopStreaming();
+  /// Command the camera to start streaming.
+  ///
+  void startStreaming();
+
+  /// Command the camera to stop streaming.
+  ///
+  void stopStreaming();
 
  protected:
   /**

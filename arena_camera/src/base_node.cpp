@@ -92,6 +92,7 @@ ArenaCameraBaseNode::ArenaCameraBaseNode(const std::string &node_name,
   //   // Initialize parameters from parameter server
   //   arena_camera_parameter_set_.readFromRosParameterServer(pnh);
 
+  // Initial parameters required to connect to the camera
   this->declare_parameter("device_user_id", "");
   this->declare_parameter("serial_number", "");
 
@@ -482,19 +483,19 @@ bool ArenaCameraBaseNode::registerCameraByAuto() {
 //   return true;
 // }
 
-// void ArenaCameraBaseNode::startStreaming() {
-//   if (!is_streaming_) {
-//     pDevice_->StartStream();
-//     is_streaming_ = true;
-//   }
-// }
+void ArenaCameraBaseNode::startStreaming() {
+  if (!is_streaming_) {
+    pDevice_->StartStream();
+    is_streaming_ = true;
+  }
+}
 
-// void ArenaCameraBaseNode::stopStreaming() {
-//   if (is_streaming_) {
-//     pDevice_->StopStream();
-//     is_streaming_ = false;
-//   }
-// }
+void ArenaCameraBaseNode::stopStreaming() {
+  if (is_streaming_) {
+    pDevice_->StopStream();
+    is_streaming_ = false;
+  }
+}
 
 // sensor_msgs::RegionOfInterest ArenaCameraBaseNode::currentROI() {
 //   sensor_msgs::RegionOfInterest roi;

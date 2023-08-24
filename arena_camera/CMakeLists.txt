@@ -131,7 +131,8 @@ ament_package()
 
 
 ##
-## !! ROS1 Cruft below.  To be removed when obsoleted
+## !! ROS1 Cruft below.  To be removed when either refactored for ROS2
+##    or made obsolete
 ##
 ##
 

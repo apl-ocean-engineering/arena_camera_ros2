@@ -1,7 +1,4 @@
 
-set(_LOG_LVL DEBUG) # does not filter as it should
-set(_LOG_LVL_FRMT "-- [ ${_LOG_LVL} ] ")
-
 # the installation script place
 set(_arena_sdk_conf "/etc/ld.so.conf.d/Arena_SDK.conf")
 
@@ -22,7 +19,7 @@ if(EXISTS ${_arena_sdk_conf})
 		)
 	string(STRIP ${arena_sdk_installation_root} arena_sdk_installation_root)
 
-	message(${_LOG_LVL_FRMT} "arena_sdk_installation_root = ${arena_sdk_installation_root}")
+	#message(${_LOG_LVL_FRMT} "arena_sdk_installation_root = ${arena_sdk_installation_root}")
 
 	######### -----------------------------------------------------------------
 	# INCLUDE
@@ -33,7 +30,7 @@ if(EXISTS ${_arena_sdk_conf})
 		${arena_sdk_installation_root}/include/Arena)
 	set (arena_sdk_INCLUDES ${arena_sdk_INCLUDE_DIRS})
 
-	#message(${_LOG_LVL_FRMT} "arena_sdk_INCLUDE_DIRS = ${arena_sdk_INCLUDE_DIRS}")
+	message(DEBUG "arena_sdk_INCLUDE_DIRS = ${arena_sdk_INCLUDE_DIRS}")
 
 	###### --------------------------------------------------------------------
 	# LIBS
