@@ -92,7 +92,7 @@ void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
 
     sensor_msgs::msg::Image::SharedPtr image =
         std::make_shared<sensor_msgs::msg::Image>();
-    image->header.stamp = now();
+    image->header.stamp = this->now();
 
     // Will return false if PixelEndiannessUnknown
     image->is_bigendian =

@@ -33,12 +33,13 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
+// ROS system headers
 #include <camera_info_manager/camera_info_manager.hpp>
 #include <image_transport/image_transport.hpp>
-#include <imaging_msgs/msg/imaging_metadata.hpp>
-#include <memory>
 #include <rclcpp/rclcpp.hpp>
-#include <string>
 
 // ROS
 // #include <actionlib/server/simple_action_server.h>
@@ -62,14 +63,11 @@
 // LucidVision Arena SDK
 #include <ArenaApi.h>
 
-// #include <arena_camera/arena_camera.h>
-// #include <arena_camera/arena_camera_parameter.h>
+#include <imaging_msgs/msg/hdr_imaging_metadata.hpp>
+#include <imaging_msgs/msg/imaging_metadata.hpp>
 
-// // Auto-generated dynamic_reconfigure header file
-// #include <arena_camera/ArenaCameraConfig.h>
-
-// #include "imaging_msgs/HdrImagingMetadata.h"
-// #include "imaging_msgs/ImagingMetadata.h"
+// Auto-generated parameters file
+#include <arena_camera_parameters.hpp>
 
 namespace arena_camera {
 // typedef actionlib::SimpleActionServer<camera_control_msgs::GrabImagesAction>
@@ -81,26 +79,6 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   ArenaCameraBaseNode(const std::string &node_name,
                       const rclcpp::NodeOptions &options);
   virtual ~ArenaCameraBaseNode();
-
-  // /**
-  //  * initialize the camera and the ros node.
-  //  * calls ros::shutdown if an error occurs.
-  //  */
-  // //void onInit() override;
-
-  // /// Getter for the current frame rate
-  // /// @return the desired frame rate.
-  // ///
-  // const double &frameRate() const {
-  //   return arena_camera_parameter_set_.frameRate();
-  // }
-
-  // /// Getter for the tf frame.
-  // /// @return the camera frame.
-  // ///
-  // const std::string &cameraFrame() const {
-  //   return arena_camera_parameter_set_.cameraFrame();
-  // }
 
   /// Command the camera to start streaming.
   ///
@@ -120,15 +98,102 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   bool registerCameraBySerialNumber(const std::string &serial_number);
   bool registerCameraByAuto();
 
+  /// Start the camera and initialize the messages
+  /// @return true if successful, false on an error
+  ///
+  bool configureCamera();
+
+  //======================================================================
+  // Camera property setters
+  //
+
+  /// Getter for the tf frame.
+  /// @return the camera frame.
+  ///
+  const std::string &cameraFrame() const { return params_.camera_frame; }
+
+  // ~~~ Image encoding ~~~
+
+  bool setImageEncoding(const std::string &ros_encoding);
+
+  std::string currentROSEncoding();
+
+  // ~~~ Frame rate ~~~
+
+  bool setFrameRate(float frame_rate);
+
+  /// Getter for the current frame rate
+  /// @return the camera's current frame rate.
+  ///
+  double currentFrameRate() const;
+
+  // ~~~ Target brightness ~~~
+
   /**
-   * Start the camera and initialize the messages
-   * @return
+   * Sets the target brightness which is the intensity-mean over all pixels.
+   * If the target exposure time is not in the range of Arena's auto target
+   * brightness range the extended brightness search is started.
+   * The Auto function of the Arena-API supports values from [50 - 205].
+   * Using a binary search, this range will be extended up to [1 - 255].
+   * @param target_brightness is the desired brightness. Range is [1...255].
+   * @param current_brightness is the current brightness with the given
+   * settings.
+   * @param exposure_auto flag which indicates if the target_brightness
+   *                      should be reached adapting the exposure time
+   * @param gain_auto flag which indicates if the target_brightness should be
+   *                      reached adapting the gain.
+   * @return true if the brightness could be reached or false otherwise.
    */
-  // bool configureCamera();
+  // bool setBrightness(const int &target_brightness, int &reached_brightness,
+  //                    const bool &exposure_auto, const bool &gain_auto);
 
-  // bool setImageEncoding(const std::string &ros_encoding);
+  void setTargetBrightness(unsigned int brightness);
 
-  // void updateFrameRate();
+  // ~~~ Exposure ~~~
+
+  enum class AutoExposureMode : int { Off = 0, Once = 1, Continuous = 2 };
+
+  // Update exposure based on arena_camera_parameter_set
+  //
+  //  If exp_mode == Off, exposure_ms is the **fixed exposure** set in the
+  //  camera If exp_mode == Once or Continuous, exposure_ms is the **max
+  //  exposure** allowed
+  //                   for the auto-exposure algorithm
+  void setExposure(AutoExposureMode exp_mode, float exposure_ms);
+
+  float currentExposure();
+
+  // ~~~ Gain ~~~
+
+  enum class AutoGainMode : int { Off = 0, Once = 1, Continuous = 2 };
+
+  /**
+   * Update the gain from the camera to a target gain in percent
+   * @param gain_mode   Request gain mode
+   * @param target_gain the targeted gain in percent.  Ignored if gain_mode
+   * isn't "Off"
+   * @param reached_gain the gain that could be reached
+   * @return true if the targeted gain could be reached
+   */
+  bool setGain(AutoGainMode gain_mode, float target_gain = 0.0);
+
+  /// Retrieve the current  gain from the camera
+  /// @return Gain
+  ///
+  float currentGain();
+
+  // ~~~ Gamma ~~~
+
+  /// Update the gamma from the camera to a target gamma correction value
+  /// @param target_gamma the targeted gamma
+  /// @return true if the targeted gamma could be reached
+  ///
+  bool setGamma(const float &target_gamma);
+
+  /// Retrieve the current gamma from the camera
+  /// @return Gamma from camera
+  ///
+  float currentGamma();
 
   /**
    * Update area of interest in the camera image
@@ -158,65 +223,6 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   //  */
   // bool setBinningY(const size_t &target_binning_y, size_t
   // &reached_binning_y);
-
-  // /**
-  //  * Sets the target brightness which is the intensity-mean over all pixels.
-  //  * If the target exposure time is not in the range of Arena's auto target
-  //  * brightness range the extended brightness search is started.
-  //  * The Auto function of the Arena-API supports values from [50 - 205].
-  //  * Using a binary search, this range will be extended up to [1 - 255].
-  //  * @param target_brightness is the desired brightness. Range is [1...255].
-  //  * @param current_brightness is the current brightness with the given
-  //  * settings.
-  //  * @param exposure_auto flag which indicates if the target_brightness
-  //  *                      should be reached adapting the exposure time
-  //  * @param gain_auto flag which indicates if the target_brightness should be
-  //  *                      reached adapting the gain.
-  //  * @return true if the brightness could be reached or false otherwise.
-  //  */
-  // // bool setBrightness(const int &target_brightness, int
-  // &reached_brightness,
-  // //                    const bool &exposure_auto, const bool &gain_auto);
-
-  // void setTargetBrightness(unsigned int brightness);
-
-  // //==== Functions to get/set exposure ====
-
-  // enum class AutoExposureMode : int { Off = 0, Once = 1, Continuous = 2 };
-
-  // // Update exposure based on arena_camera_parameter_set
-  // //
-  // //  If exp_mode == Off, exposure_ms is the **fixed exposure** set in the
-  // //  camera If exp_mode == Once or Continuous, exposure_ms is the **max
-  // //  exposure** allowed
-  // //                   for the auto-exposure algorithm
-  // void setExposure(AutoExposureMode exp_mode, float exposure_ms);
-  // float currentExposure();
-
-  // //==== Functions to get/set gain ====
-
-  // enum class AutoGainMode : int { Off = 0, Once = 1, Continuous = 2 };
-
-  // /**
-  //  * Update the gain from the camera to a target gain in percent
-  //  * @param gain_mode   Request gain mode
-  //  * @param target_gain the targeted gain in percent.  Ignored if gain_mode
-  //  * isn't "Off"
-  //  * @param reached_gain the gain that could be reached
-  //  * @return true if the targeted gain could be reached
-  //  */
-  // bool setGain(AutoGainMode gain_mode, float target_gain = 0.0);
-  // float currentGain();
-
-  // //==== Functions to get/set gamma ====
-
-  // /**
-  //  * Update the gamma from the camera to a target gamma correction value
-  //  * @param target_gamma the targeted gamma
-  //  * @return true if the targeted gamma could be reached
-  //  */
-  // bool setGamma(const float &target_gamma);
-  // float currentGamma();
 
   // //===== Functions for querying HDR channels (IMX490 only)
   // float currentHdrGain(int channel);
@@ -271,21 +277,26 @@ class ArenaCameraBaseNode : public rclcpp::Node {
 
   bool is_streaming_;
 
+  // ~~~ Publishers ~~~
+
   image_transport::CameraPublisher img_raw_pub_;
   std::shared_ptr<camera_info_manager::CameraInfoManager> camera_info_manager_;
 
   rclcpp::Publisher<imaging_msgs::msg::ImagingMetadata>::SharedPtr
       metadata_pub_;
 
-  std::shared_ptr<rclcpp::ParameterEventHandler> param_subscriber_;
+  rclcpp::Publisher<imaging_msgs::msg::HdrImagingMetadata>::SharedPtr
+      hdr_metadata_pub_;
+
+  // ~~~ Parameters ~~
+  std::shared_ptr<arena_camera::ParamListener> param_listener_;
+  arena_camera::Params params_;
 
   // Hardware accessor functions
   // These might have originally been in arena_camera.h?
   // sensor_msgs::RegionOfInterest currentROI();
   // int64_t currentBinningX();
   // int64_t currentBinningY();
-
-  std::string currentROSEncoding();
 
   // bool setBinningXValue(const size_t &target_binning_x,
   //                       size_t &reached_binning_x);

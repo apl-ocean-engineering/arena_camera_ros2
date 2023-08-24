@@ -96,6 +96,7 @@ ONBUILD RUN git clone -b ${ARENA_CAMERA_ROS2_BRANCH} ${ARENA_CAMERA_ROS2_REPO}
 # dockerfile_lint - ignore
 FROM build_${BUILD_TYPE} as arena_camera_ros2
 
+ARG ROS_VERSION
 ARG WS_DIR
 LABEL Version=0.1
 LABEL Name=arena_camera_ros2
@@ -105,18 +106,18 @@ RUN vcs import --shallow --skip-existing < arena_camera_ros2/arena_camera_ros2.r
 
 WORKDIR ${WS_DIR}
 
+RUN rosdep update --rosdistro=${ROS_VERSION}
 # This is quite expensive to run on every build...
-# RUN bash -c "apt-get update \
-#               && source /opt/ros/noetic/setup.bash \
-#               && rosdep install -y --ignore-src \
-#                     --skip-keys=arena_sdk \
-#                     --from-paths src/ \
-#               && rm -rf /var/lib/apt/lists/*"
+RUN ~/ros2_entrypoint.sh \
+       rosdep install -y --ignore-src \
+                    --rosdistro=${ROS_VERSION} \
+                    --skip-keys=arena_sdk \
+                    --from-paths src/
 
-RUN bash -c "~/ros2_entrypoint.sh \
+RUN ~/ros2_entrypoint.sh \
                 colcon build && \
-                colcon test"
+                colcon test
 
 # Convert ARG to ENV
 ENV ROS_WS ${WS_DIR}
-CMD ["ros2", "launch", "arena_camera", "streaming_arena_camera.launch.py"]
+CMD ["ros2", "launch", "arena_camera", "streaming.launch.py"]

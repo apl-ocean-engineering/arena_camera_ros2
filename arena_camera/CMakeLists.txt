@@ -25,12 +25,17 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   camera_info_manager
   image_transport
   imaging_msgs
+  generate_parameter_library
 )
 
 foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
   find_package(${Dependency} REQUIRED)
 endforeach()
 
+generate_parameter_library(
+  arena_camera_parameters # cmake target name for the parameter library
+  src/parameters.yaml     # path to input yaml file
+)
 
 # set(CATKIN_COMPONENTS
 #      actionlib
@@ -55,7 +60,6 @@ set(arena_camera_lib ${PROJECT_NAME})
 
 add_library( ${arena_camera_lib}
     src/encoding_conversions.cpp
-    src/arena_camera_parameter.cpp
     src/base_node.cpp
     src/polled_node.cpp
     src/streaming_node.cpp
@@ -70,6 +74,7 @@ target_include_directories( ${arena_camera_lib}
 
 target_link_libraries( ${arena_camera_lib}
     ${arena_sdk_LIBRARIES}
+    arena_camera_parameters
 )
 
 #set_target_properties(${arena_camera_lib} PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -95,23 +100,27 @@ install(DIRECTORY
   DESTINATION include
 )
 
+# Installation of the library has an unexpected dependency on
+# "arena_camera_parameters".   Resolve if downstream packages
+# ever want to use the arena_camera library.
 install(
   TARGETS ${arena_camera_lib}
-  EXPORT export_${PROJECT_NAME}
+#  EXPORT export_${PROJECT_NAME}
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
 )
+# ament_export_targets(export_${arena_camera_lib} HAS_LIBRARY_TARGET)
+# ament_export_dependencies(arena_camera_parameters)
 
 install(TARGETS polled_node streaming_node
     DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY
-  launch
+  launch config
   DESTINATION share/${PROJECT_NAME}/
 )
 
-ament_export_targets(export_${arena_camera_lib} HAS_LIBRARY_TARGET)
 
 
 if(BUILD_TESTING)
