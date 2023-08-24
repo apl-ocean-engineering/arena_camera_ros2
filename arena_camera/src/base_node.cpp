@@ -559,20 +559,20 @@ void ArenaCameraBaseNode::stopStreaming() {
 //   }
 // }
 
-// std::string ArenaCameraBaseNode::currentROSEncoding() {
-//   std::string gen_api_encoding(Arena::GetNodeValue<GenICam::gcstring>(
-//       pDevice_->GetNodeMap(), "PixelFormat"));
-//   std::string ros_encoding("");
-//   if (!encoding_conversions::genAPI2Ros(gen_api_encoding, ros_encoding)) {
-//     std::stringstream ss;
-//     ss << "No ROS equivalent to GenApi encoding '" << gen_api_encoding
-//        << "' found! This is bad because this case "
-//           "should never occur!";
-//     throw std::runtime_error(ss.str());
-//     return "NO_ENCODING";
-//   }
-//   return ros_encoding;
-// }
+std::string ArenaCameraBaseNode::currentROSEncoding() {
+  std::string gen_api_encoding(Arena::GetNodeValue<GenICam::gcstring>(
+      pDevice_->GetNodeMap(), "PixelFormat"));
+  std::string ros_encoding("");
+  if (!encoding_conversions::genAPI2Ros(gen_api_encoding, ros_encoding)) {
+    std::stringstream ss;
+    ss << "No ROS equivalent to GenApi encoding '" << gen_api_encoding
+       << "' found! This is bad because this case "
+          "should never occur!";
+    throw std::runtime_error(ss.str());
+    return "NO_ENCODING";
+  }
+  return ros_encoding;
+}
 
 // bool ArenaCameraBaseNode::setImageEncoding(const std::string &ros_encoding) {
 //   std::string gen_api_encoding;

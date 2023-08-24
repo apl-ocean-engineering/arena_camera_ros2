@@ -284,7 +284,9 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   // sensor_msgs::RegionOfInterest currentROI();
   // int64_t currentBinningX();
   // int64_t currentBinningY();
-  // std::string currentROSEncoding();
+
+  std::string currentROSEncoding();
+
   // bool setBinningXValue(const size_t &target_binning_x,
   //                       size_t &reached_binning_x);
   // bool setBinningYValue(const size_t &target_binning_y,

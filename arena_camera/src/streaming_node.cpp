@@ -29,6 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
+#include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
 #include "arena_camera/arena_camera_nodes.h"
@@ -89,22 +90,22 @@ void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
       return;
     }
 
-    sensor_msgs::msg::Image::Ptr image =
-        boost::make_shared<sensor_msgs::msg::Image>();
-    image.header.stamp = ros::Time::now();
-    //     // Will return false if PixelEndiannessUnknown
-    //     img_raw_msg_.is_bigendian =
-    //         (pImage->GetPixelEndianness() == Arena::PixelEndiannessBig);
+    sensor_msgs::msg::Image::SharedPtr image =
+        std::make_shared<sensor_msgs::msg::Image>();
+    image->header.stamp = now();
 
-    //     img_raw_msg_.encoding = currentROSEncoding();
-    //     img_raw_msg_.height = pImage->GetHeight();
-    //     img_raw_msg_.width = pImage->GetWidth();
+    // Will return false if PixelEndiannessUnknown
+    image->is_bigendian =
+        (pImage->GetPixelEndianness() == Arena::PixelEndiannessBig);
 
-    //     const unsigned int bytes_per_pixel = pImage->GetBitsPerPixel() / 8;
-    //     img_raw_msg_.step = img_raw_msg_.width * bytes_per_pixel;
+    image->encoding = currentROSEncoding();
+    image->height = pImage->GetHeight();
+    image->width = pImage->GetWidth();
 
-    //     const unsigned int data_size = img_raw_msg_.height *
-    //     img_raw_msg_.step;
+    const unsigned int bytes_per_pixel = pImage->GetBitsPerPixel() / 8;
+    image->step = image->width * bytes_per_pixel;
+
+    const unsigned int data_size = image->height * image->step;
 
     //     // NODELET_INFO_STREAM("Image size " << pImage->GetWidth() << " x "
     //     <<
@@ -117,19 +118,20 @@ void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
     //     filled "
     //     //                     << pImage->GetSizeFilled());
 
-    //     // \todo{amarburg} Validate image by comparing calculated image
-    //     //  size to actual Buffer/Image payload size
-    //     img_raw_msg_.data.resize(data_size);
-    //     memcpy(&img_raw_msg_.data[0], pImage->GetData(), data_size);
+    // \todo{amarburg} Validate image by comparing calculated image
+    //  size to actual Buffer/Image payload size
+    image->data.resize(data_size);
+    memcpy(&image->data[0], pImage->GetData(), data_size);
 
     if (img_raw_pub_.getNumSubscribers() > 0) {
       // Create a new cam_info-object in every frame, because it might have
       // changed due to a 'set_camera_info'-service call
-      sensor_msgs::CameraInfo cam_info =
-          sensor_msgs::CameraInfo(camera_info_manager_->getCameraInfo());
-      cam_info.header.stamp = img_raw_msg_.header.stamp;
+      sensor_msgs::msg::CameraInfo::SharedPtr cam_info =
+          std::make_shared<sensor_msgs::msg::CameraInfo>(
+              camera_info_manager_->getCameraInfo());
+      cam_info->header.stamp = image->header.stamp;
 
-      img_raw_pub_.publish(img_raw_msg_, cam_info);
+      img_raw_pub_.publish(image, cam_info);
     }
   }
 
