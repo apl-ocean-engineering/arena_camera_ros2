@@ -41,25 +41,6 @@
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-// ROS
-// #include <actionlib/server/simple_action_server.h>
-// #include <camera_control_msgs/GrabImagesAction.h>
-// #include <camera_control_msgs/SetBinning.h>
-// #include <camera_control_msgs/SetBool.h>
-// #include <camera_control_msgs/SetBrightness.h>
-// #include <camera_control_msgs/SetExposure.h>
-// #include <camera_control_msgs/SetGain.h>
-// #include <camera_control_msgs/SetGamma.h>
-// #include <camera_control_msgs/SetROI.h>
-// #include <camera_info_manager/camera_info_manager.h>
-// #include <diagnostic_updater/diagnostic_updater.h>
-// #include <diagnostic_updater/publisher.h>
-// #include <dynamic_reconfigure/server.h>
-// #include <image_geometry/pinhole_camera_model.h>
-// #include <Node/Node.h>
-// #include <sensor_msgs/CameraInfo.h>
-// #include <sensor_msgs/image_encodings.h>
-
 // LucidVision Arena SDK
 #include <ArenaApi.h>
 
@@ -70,8 +51,6 @@
 #include <arena_camera_parameters.hpp>
 
 namespace arena_camera {
-// typedef actionlib::SimpleActionServer<camera_control_msgs::GrabImagesAction>
-//     GrabImagesAS;
 
 /// Base class for both types of Nodes
 class ArenaCameraBaseNode : public rclcpp::Node {
@@ -120,6 +99,10 @@ class ArenaCameraBaseNode : public rclcpp::Node {
 
   // ~~~ Frame rate ~~~
 
+  /// Getter for the current frame rate
+  /// @param frame_rate  Desired frame rate in Hz
+  /// @return True on success, false on error
+  ///
   bool setFrameRate(float frame_rate);
 
   /// Getter for the current frame rate
@@ -159,7 +142,9 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   //  camera If exp_mode == Once or Continuous, exposure_ms is the **max
   //  exposure** allowed
   //                   for the auto-exposure algorithm
-  void setExposure(AutoExposureMode exp_mode, float exposure_ms);
+  bool setExposure(AutoExposureMode exp_mode, float exposure_ms);
+
+  bool setExposure(const arena_camera::Params &params);
 
   float currentExposure();
 
@@ -167,15 +152,22 @@ class ArenaCameraBaseNode : public rclcpp::Node {
 
   enum class AutoGainMode : int { Off = 0, Once = 1, Continuous = 2 };
 
-  /**
-   * Update the gain from the camera to a target gain in percent
-   * @param gain_mode   Request gain mode
-   * @param target_gain the targeted gain in percent.  Ignored if gain_mode
-   * isn't "Off"
-   * @param reached_gain the gain that could be reached
-   * @return true if the targeted gain could be reached
-   */
+  ///
+  /// Update the gain from the camera to a target gain in percent
+  /// @param gain_mode   Request gain mode
+  /// @param target_gain the targeted gain in percent.  Ignored if gain_mode
+  /// isn't "Off"
+  ///
+  /// @return  true if the requested gain settings were accepted by the camera,
+  /// false on error
+  ///
   bool setGain(AutoGainMode gain_mode, float target_gain = 0.0);
+
+  /// Convenience wrapper which reads directly from a Params struct.
+  /// @param params An arena_camera::Params struct
+  /// @return  true if the requested gain settings were accepted by the camera,
+  /// false on error
+  bool setGain(const arena_camera::Params &params);
 
   /// Retrieve the current  gain from the camera
   /// @return Gain
@@ -256,10 +248,6 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   //  */
   // float calcCurrentBrightness();
 
-  // void initCalibrationMatrices(sensor_msgs::CameraInfo &info, const cv::Mat
-  // &D,
-  //                              const cv::Mat &K);
-
   // /**
   //  *  Enable/disable lookup table (LUT) in camera.
   //  * @param enable Whether to enable/disable the camera LUT
@@ -291,6 +279,9 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   // ~~~ Parameters ~~
   std::shared_ptr<arena_camera::ParamListener> param_listener_;
   arena_camera::Params params_;
+
+  rclcpp::TimerBase::SharedPtr parameter_check_timer_;
+  void checkParametersCb(void);
 
   // Hardware accessor functions
   // These might have originally been in arena_camera.h?

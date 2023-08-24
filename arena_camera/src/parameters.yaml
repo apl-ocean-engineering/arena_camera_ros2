@@ -38,6 +38,13 @@ arena_camera:
     description: "ROS TF Frame",
   }
 
+  camera_info_url: {
+    type: string,
+    default_value: "",
+    read_only: true,
+    description: "URL for camera calibration",
+  }
+
   frame_rate: {
     type: double,
     default_value: 5.0,
