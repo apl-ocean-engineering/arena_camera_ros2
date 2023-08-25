@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 #
 # ARENA SDK
 #
-# ADDS :
+# creates these variables:
 # - ${_arena_sdk_ROOT}
 # - ${arena_sdk_INCLUDE_DIRS} and ${arena_sdk_INCLUDES}
 # - ${arena_sdk_LIBRARIES_DIRS} and ${arena_sdk_LIBS}
@@ -37,25 +37,6 @@ generate_parameter_library(
   src/parameters.yaml     # path to input yaml file
 )
 
-# set(CATKIN_COMPONENTS
-#      actionlib
-#      camera_control_msgs # arena_camera depends on this upper custom msg package
-#      dynamic_reconfigure
-#      camera_info_manager
-#      cv_bridge
-#      diagnostic_updater
-#      image_geometry
-#      image_transport
-#      roscpp
-#      roslint
-#      roslaunch
-#      sensor_msgs
-#      nodelet
-#      imaging_msgs
-# )
-
-
-#  flags for all C++ targets
 set(arena_camera_lib ${PROJECT_NAME})
 
 add_library( ${arena_camera_lib}
@@ -94,9 +75,12 @@ foreach(Executable IN ITEMS polled_node streaming_node)
   target_link_libraries(${Executable} ${arena_camera_lib})
 endforeach()
 
-# Install launch files, library and executables
-install(DIRECTORY
-  include/
+add_executable( dump_genicam_nodes
+    tools/dump_genicam_nodes.cpp
+)
+
+install(
+  DIRECTORY include/
   DESTINATION include
 )
 
@@ -112,12 +96,18 @@ install(
 # ament_export_targets(export_${arena_camera_lib} HAS_LIBRARY_TARGET)
 # ament_export_dependencies(arena_camera_parameters)
 
-install(TARGETS polled_node streaming_node
-    DESTINATION lib/${PROJECT_NAME}
+install(
+  TARGETS dump_genicam_nodes
+  DESTINATION bin
 )
 
-install(DIRECTORY
-  launch config
+install(
+  TARGETS polled_node streaming_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}/
 )
 
@@ -136,138 +126,3 @@ if(BUILD_TESTING)
 endif()
 
 ament_package()
-
-
-
-##
-## !! ROS1 Cruft below.  To be removed when either refactored for ROS2
-##    or made obsolete
-##
-##
-
-
-#
-# WRITE_DEVICE_USER_ID_TO_CAMERA
-#
-
-# set(write_device_user_id_to_camera write_device_user_id_to_camera)
-
-# # - declare an executable
-# # - needed ".cpp"s
-# add_executable(
-#     ${write_device_user_id_to_camera} # run by rosrun
-#         src/write_device_user_id_to_camera.cpp
-# )
-
-# # needed ".h"s
-# target_include_directories(
-#     ${write_device_user_id_to_camera}
-#         PRIVATE ${arena_sdk_INCLUDE_DIRS}
-#         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
-# )
-
-# # needed ".so"s
-# target_link_libraries(
-#     ${write_device_user_id_to_camera}
-#         ${arena_sdk_LIBRARIES}
-# )
-
-
-# target_link_directories NOT NEEDED as arena_sdk_LIBRARIES is
-# define with absolute paths
-
-# add_executable( dump_genicam_nodes
-#     tools/dump_genicam_nodes.cpp
-# )
-
-# # needed ".h"s
-# target_include_directories( dump_genicam_nodes
-#     PRIVATE ${arena_sdk_INCLUDE_DIRS}
-# )
-
-# # needed ".so"s
-# target_link_libraries( dump_genicam_nodes
-#     ${arena_sdk_LIBRARIES}
-# )
-
-
-# -----------------------------------------------------------------------------
-#
-# 9
-#
-# -----------------------------------------------------------------------------
-
-# N/A
-
-# -----------------------------------------------------------------------------
-#
-# 10
-#
-# -----------------------------------------------------------------------------
-
-# install(
-#     DIRECTORY
-#         launch/
-#     DESTINATION
-#         ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
-#     FILES_MATCHING PATTERN "*.launch"
-# )
-
-# install(
-#     DIRECTORY
-#         config/
-#     DESTINATION
-#         ${CATKIN_PACKAGE_SHARE_DESTINATION}/config
-#     FILES_MATCHING PATTERN "*.yaml"
-# )
-
-# install(
-#     PROGRAMS
-#         scripts/file_sequencer.py
-#         scripts/grab_and_save_image_action_server.py
-#         scripts/result_bag_to_action.py
-#         scripts/sequence_to_file.py
-#         scripts/toggle_camera
-#         scripts/triggered_image_topic.py
-#     DESTINATION
-#      ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
-
-# install(
-#     TARGETS
-#         ${streaming_arena_camera_node}
-#         ${polled_arena_camera_node}
-#         ${write_device_user_id_to_camera}
-#         dump_genicam_nodes
-#     LIBRARY DESTINATION
-#         ${CATKIN_PACKAGE_LIB_DESTINATION}
-#     RUNTIME DESTINATION
-#         ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-# install(
-#     DIRECTORY
-#         include/${PROJECT_NAME}/
-#     DESTINATION
-#         ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#     FILES_MATCHING PATTERN
-#         "*.h"
-#     PATTERN "internal" EXCLUDE
-# )
-
-# ## Testing ##
-# # All Jenkins-Tests are now in the arena_camera_tests-pkg
-# #############
-
-# ###############
-# ## QtCreator ##
-# ###############
-# # entry for QtCreator to show all files
-# file(GLOB children ${CMAKE_CURRENT_SOURCE_DIR}/*)
-# foreach(child ${children})
-#   if(IS_DIRECTORY ${child})
-#     file(GLOB_RECURSE dir_files "${child}/*")
-#     list(APPEND ${PROJECT_NAME}_extra_files ${dir_files})
-#   endif()
-# endforeach()
-# #add_custom_target(dummy_${PROJECT_NAME} SOURCES ${${PROJECT_NAME}_extra_files})

@@ -1,6 +1,5 @@
 # NOTE: USED BY the package .launch files
 arena_camera:
-
   ros__parameters:
 
     #  The tf frame under which the images were published
