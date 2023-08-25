@@ -19,7 +19,7 @@ WORKDIR /tmp
 RUN apt-get update && apt-get install -y \
     git \
     python3-vcstool \
-    os-${ROS_VERSION}-generate-parameter-library \
+    ros-${ROS_VERSION}-generate-parameter-library \
     wget \
     && apt autoremove -y \
     && apt clean -y \
