@@ -9,6 +9,7 @@ ARG ROS_VERSION=iron
 FROM ros:${ROS_VERSION}-perception AS deps
 
 # This should be set automatically by the build engine
+ARG ROS_VERSION
 ARG TARGETPLATFORM
 ARG ARENA_SDK_URL_BASE=https://s3.us-east-1.wasabisys.com/amarburg-east/LucidVision_SDK
 
@@ -18,6 +19,7 @@ WORKDIR /tmp
 RUN apt-get update && apt-get install -y \
     git \
     python3-vcstool \
+    os-${ROS_VERSION}-generate-parameter-library \
     wget \
     && apt autoremove -y \
     && apt clean -y \

@@ -63,21 +63,33 @@ target_link_libraries( ${arena_camera_lib}
 # rclcpp_components_register_nodes(${arena_camera_lib} "arena_camera::ArenaCameraPolledNode")
 # rclcpp_components_register_nodes(${arena_camera_lib} "arena_camera::ArenaCameraStreamingNode")
 
-## Build stand-alone executables
-foreach(Executable IN ITEMS polled_node streaming_node)
+## Build stand-alone nodes
+foreach(RosNode IN ITEMS polled_node streaming_node)
 
-  add_executable(${Executable} src/nodes/${Executable}_main.cpp)
-  target_include_directories( ${Executable}
+  add_executable(${RosNode} src/nodes/${RosNode}_main.cpp)
+  target_include_directories( ${RosNode}
       PRIVATE ${arena_sdk_INCLUDE_DIRS}
       PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
   )
 
-  target_link_libraries(${Executable} ${arena_camera_lib})
+  target_link_libraries(${RosNode} ${arena_camera_lib})
 endforeach()
 
+
+# ~~~ Standalone executable to dump all nodes from a camera
+#
 add_executable( dump_genicam_nodes
     tools/dump_genicam_nodes.cpp
 )
+
+target_include_directories( dump_genicam_nodes
+    PRIVATE ${arena_sdk_INCLUDE_DIRS}
+)
+
+target_link_libraries( dump_genicam_nodes
+    ${arena_sdk_LIBRARIES}
+)
+
 
 install(
   DIRECTORY include/
