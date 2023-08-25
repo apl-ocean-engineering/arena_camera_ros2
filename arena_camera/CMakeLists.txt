@@ -23,6 +23,7 @@ set(THIS_PACKAGE_INCLUDE_DEPENDS
   ament_cmake
   camera_control_msgs
   camera_info_manager
+  diagnostic_updater
   image_transport
   imaging_msgs
   generate_parameter_library

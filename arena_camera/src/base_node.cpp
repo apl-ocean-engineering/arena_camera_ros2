@@ -67,6 +67,14 @@ ArenaCameraBaseNode::ArenaCameraBaseNode(const std::string &node_name,
 // pinhole_model_(),
 // sampling_indices_()
 {
+  diagnostics_updater_ = std::make_shared<diagnostic_updater::Updater>(this, 2);
+  //   diagnostics_updater_.setHardwareID("none");
+  //   diagnostics_updater_.add("camera_availability", this,
+  //                            &ArenaCameraBaseNode::create_diagnostics);
+  //   diagnostics_updater_.add(
+  //       "intrinsic_calibration", this,
+  //       &ArenaCameraBaseNode::create_camera_info_diagnostics);
+
   img_raw_pub_ = image_transport::create_camera_publisher(this, "image_raw");
   camera_info_manager_ =
       std::make_shared<camera_info_manager::CameraInfoManager>(this,
@@ -74,17 +82,6 @@ ArenaCameraBaseNode::ArenaCameraBaseNode(const std::string &node_name,
 
   metadata_pub_ = this->create_publisher<imaging_msgs::msg::ImagingMetadata>(
       "imaging_metadata", 1);
-
-  //   diagnostics_updater_.setHardwareID("none");
-  //   diagnostics_updater_.add("camera_availability", this,
-  //                            &ArenaCameraBaseNode::create_diagnostics);
-  //   diagnostics_updater_.add(
-  //       "intrinsic_calibration", this,
-  //       &ArenaCameraBaseNode::create_camera_info_diagnostics);
-  //   diagnostics_trigger_ = nh.createTimer(
-  //       ros::Duration(2),
-  //       &ArenaCameraBaseNode::diagnostics_timer_callback_,
-  //       this);
 
   param_listener_ = std::make_shared<arena_camera::ParamListener>(
       this->get_node_parameters_interface());
@@ -493,11 +490,12 @@ bool ArenaCameraBaseNode::setImageEncoding(const std::string &ros_encoding) {
                             << "\", enabling HDR mode in camera");
 
     try {
-      // GenApi::CStringPtr pHDROutput = pNodeMap->GetNode("HDROutput");
-      // if (GenApi::IsWritable(pHDROutput)) {
-      //   Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "HDROutput",
-      //   "HDR");
-      // }
+      GenApi::CStringPtr pHDROutput =
+          pDevice_->GetNodeMap()->GetNode("HDROutput");
+      if (GenApi::IsWritable(pHDROutput)) {
+        Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(),
+                                               "HDROutput", "HDR");
+      }
 
       // Enable HDR image enhancement
       Arena::SetNodeValue<bool>(node_map, "HDRImageEnhancementEnable", true);
@@ -687,15 +685,12 @@ bool ArenaCameraBaseNode::setExposure(const arena_camera::Params &p) {
 }
 
 float ArenaCameraBaseNode::currentExposure() {
-  GenApi::CFloatPtr pExposureTime =
-      pDevice_->GetNodeMap()->GetNode("ExposureTime");
-
-  if (!pExposureTime || !GenApi::IsReadable(pExposureTime)) {
-    RCLCPP_WARN(this->get_logger(), "No exposure time value, returning -1");
-    return -1.;
-  } else {
-    float exposureValue = pExposureTime->GetValue();
-    return exposureValue;
+  try {
+    return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "ExposureTime");
+  } catch (const GenICam::GenericException &e) {
+    RCLCPP_ERROR_STREAM(this->get_logger(),
+                        "Unable to read exposure: " << e.GetDescription());
+    return -1;
   }
 }
 
@@ -882,6 +877,41 @@ void ArenaCameraBaseNode::setTargetBrightness(unsigned int brightness) {
     RCLCPP_ERROR_STREAM(
         this->get_logger(),
         "An exception while setting TargetBrightness: " << e.GetDescription());
+  }
+}
+
+//========================================================================
+//
+// Per-channel HDR gain
+//
+
+float ArenaCameraBaseNode::currentHdrGain(int channel) {
+  try {
+    Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(),
+                                 "HDRTuningChannelSelector", channel);
+
+    return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(),
+                                       "HDRChannelAnalogGain");
+  } catch (const GenICam::GenericException &e) {
+    RCLCPP_ERROR_STREAM(
+        this->get_logger(),
+        "Exception while querying HDR gain: " << e.GetDescription());
+    return -1;
+  }
+}
+
+float ArenaCameraBaseNode::currentHdrExposure(int channel) {
+  try {
+    Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(),
+                                 "HDRTuningChannelSelector", channel);
+
+    return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(),
+                                       "HDRChannelExposureTime");
+  } catch (const GenICam::GenericException &e) {
+    RCLCPP_ERROR_STREAM(
+        this->get_logger(),
+        "Exception while querying HDR exposure time: " << e.GetDescription());
+    return -1;
   }
 }
 
@@ -1167,39 +1197,6 @@ void ArenaCameraBaseNode::setTargetBrightness(unsigned int brightness) {
 // }
 
 // //-------------------------------------------------------------------
-// //
-// // HDR Channel Query and set functions
-// //
-// float ArenaCameraBaseNode::currentHdrGain(int channel) {
-//   try {
-//     Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(),
-//                                  "HDRTuningChannelSelector", channel);
-
-//     return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(),
-//                                        "HDRChannelAnalogGain");
-//   } catch (const GenICam::GenericException &e) {
-//     Node_ERROR_STREAM(
-//         "Exception while querying HDR gain: " << e.GetDescription());
-//     return -1;
-//   }
-// }
-
-// float ArenaCameraBaseNode::currentHdrExposure(int channel) {
-//   try {
-//     Arena::SetNodeValue<int64_t>(pDevice_->GetNodeMap(),
-//                                  "HDRTuningChannelSelector", channel);
-
-//     return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(),
-//                                        "HDRChannelExposureTime");
-//   } catch (const GenICam::GenericException &e) {
-//     Node_ERROR_STREAM(
-//         "Exception while querying HDR exposure time: " <<
-//         e.GetDescription());
-//     return -1;
-//   }
-// }
-
-// //-------------------------------------------------------------------
 // // Functions for dealing with LUT
 // //
 // // \todo{amarburg}  Very simple right now
@@ -1215,7 +1212,7 @@ void ArenaCameraBaseNode::setTargetBrightness(unsigned int brightness) {
 //   }
 // }
 
-//------------------------------------------------------------------------
+//===================================================================
 //  Periodic callback to check if parameters have changed
 //
 

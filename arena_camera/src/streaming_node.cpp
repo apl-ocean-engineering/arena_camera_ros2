@@ -143,25 +143,24 @@ void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
 
     metadata_pub_->publish(meta_msg);
 
-    //   if (encoding_conversions::isHDR(currentROSEncoding())) {
-    //     imaging_msgs::HdrImagingMetadata hdr_meta_msg;
-    //     hdr_meta_msg.header = meta_msg.header;
-    //     hdr_meta_msg.exposure_us = meta_msg.exposure_us;
-    //     hdr_meta_msg.gain = meta_msg.gain;
+    if (encoding_conversions::isHDR(currentROSEncoding())) {
+      imaging_msgs::msg::HdrImagingMetadata hdr_meta_msg;
+      hdr_meta_msg.header = meta_msg.header;
+      hdr_meta_msg.exposure_us = meta_msg.exposure_us;
+      hdr_meta_msg.gain = meta_msg.gain;
 
-    //     const int num_hdr_channels = 4;
-    //     hdr_meta_msg.hdr_exposure_us.resize(num_hdr_channels);
-    //     hdr_meta_msg.hdr_gain.resize(num_hdr_channels);
+      const int num_hdr_channels = 4;
+      hdr_meta_msg.hdr_exposure_us.resize(num_hdr_channels);
+      hdr_meta_msg.hdr_gain.resize(num_hdr_channels);
 
-    //     for (int hdr_channel = 0; hdr_channel < num_hdr_channels;
-    //     hdr_channel++)
-    //     {
-    //       hdr_meta_msg.hdr_exposure_us[hdr_channel] =
-    //           currentHdrExposure(hdr_channel);
-    //       hdr_meta_msg.hdr_gain[hdr_channel] = currentHdrGain(hdr_channel);
-    //     }
+      for (int hdr_channel = 0; hdr_channel < num_hdr_channels; hdr_channel++) {
+        hdr_meta_msg.hdr_exposure_us[hdr_channel] =
+            currentHdrExposure(hdr_channel);
+        hdr_meta_msg.hdr_gain[hdr_channel] = currentHdrGain(hdr_channel);
+      }
 
-    //     hdr_metadata_pub_.publish(hdr_meta_msg);
+      hdr_metadata_pub_->publish(hdr_meta_msg);
+    }
   }
 }
 

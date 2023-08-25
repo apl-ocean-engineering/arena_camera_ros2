@@ -38,6 +38,7 @@
 
 // ROS system headers
 #include <camera_info_manager/camera_info_manager.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -187,6 +188,12 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   ///
   float currentGamma();
 
+  // ~~~ HDR metadata (IMX490 only) ~~~
+
+  float currentHdrGain(int channel);
+
+  float currentHdrExposure(int channel);
+
   /**
    * Update area of interest in the camera image
    * @param target_roi the target roi
@@ -217,8 +224,6 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   // &reached_binning_y);
 
   // //===== Functions for querying HDR channels (IMX490 only)
-  // float currentHdrGain(int channel);
-  // float currentHdrExposure(int channel);
 
   // /**
   //  * Generates the subset of points on which the brightness search will be
@@ -266,7 +271,6 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   bool is_streaming_;
 
   // ~~~ Publishers ~~~
-
   image_transport::CameraPublisher img_raw_pub_;
   std::shared_ptr<camera_info_manager::CameraInfoManager> camera_info_manager_;
 
@@ -295,45 +299,20 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   //                       size_t &reached_binning_y);
   // void disableAllRunningAutoBrightessFunctions();
 
-  // ros::Publisher metadata_pub_, hdr_metadata_pub_;
-
-  // ArenaCameraParameter arena_camera_parameter_set_;
-
-  // std::vector<ros::ServiceServer> set_user_output_srvs_;
-
-  // std::unique_ptr<image_transport::ImageTransport> it_;
-  // image_transport::CameraPublisher img_raw_pub_;
-
-  // image_geometry::PinholeCameraModel pinhole_model_;
-
-  // // Don't like using this global member
-  // sensor_msgs::Image img_raw_msg_;
-
   // std::vector<std::size_t> sampling_indices_;
   // // std::array<float, 256> brightness_exp_lut_;
 
   // boost::recursive_mutex device_mutex_;
 
-  // typedef dynamic_reconfigure::Server<arena_camera::ArenaCameraConfig>
-  //     DynReconfigureServer;
-  // std::shared_ptr<DynReconfigureServer> _dynReconfigureServer;
-
-  // // Non-virtual callback which calls virtual function
-  // void reconfigureCallbackWrapper(ArenaCameraConfig &config, uint32_t level)
-  // {
-  //   reconfigureCallback(config, level);
-  // }
-
-  // virtual void reconfigureCallback(ArenaCameraConfig &config, uint32_t
-  // level); ArenaCameraConfig previous_config_;
-
   // /// diagnostics:
-  // diagnostic_updater::Updater diagnostics_updater_;
-  // void diagnostics_timer_callback_(const ros::TimerEvent &);
-  // ros::Timer diagnostics_trigger_;
-  // void create_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
-  // void create_camera_info_diagnostics(
-  //     diagnostic_updater::DiagnosticStatusWrapper &stat);
+  std::shared_ptr<diagnostic_updater::Updater> diagnostics_updater_;
+
+  // rclcpp::TimerBase::SharedPtr diagnostics_timer_;
+  // void updateDiagnosticsCb(void);
+
+  void create_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
+  void create_camera_info_diagnostics(
+      diagnostic_updater::DiagnosticStatusWrapper &stat);
 };
 
 class ArenaCameraStreamingNode : public ArenaCameraBaseNode {
@@ -350,8 +329,9 @@ class ArenaCameraStreamingNode : public ArenaCameraBaseNode {
   // The ArenaSDK takes a class derived from Arena::IImageCallback
   // for the new-image callback.
   //
-  // ImageCallback meets the Arena requirement, and wraps
-  // a callback **back** into this ArenaCameraStreamingNode
+  // This class ImageCallback meets the Arena requirement, and wraps
+  // a functional callback (which can then be **back** into
+  // ArenaCameraStreamingNode)
   //
   class ImageCallback : public Arena::IImageCallback {
    public:
@@ -371,9 +351,6 @@ class ArenaCameraStreamingNode : public ArenaCameraBaseNode {
   ImageCallback image_callback_obj_;
 
   void newImageCb(Arena::IImage *pImage);
-
-  // void reconfigureCallback(ArenaCameraConfig &config, uint32_t level)
-  // override;
 };
 
 class ArenaCameraPolledNode : public ArenaCameraBaseNode {
@@ -407,11 +384,6 @@ class ArenaCameraPolledNode : public ArenaCameraBaseNode {
   // virtual bool grabImage();
 
   // std::unique_ptr<GrabImagesAS> grab_imgs_raw_as_;
-
-  // void reconfigureCallback(ArenaCameraConfig &config, uint32_t level)
-  // override {
-  //   ;
-  // }
 };
 
 }  // namespace arena_camera
