@@ -41,7 +41,7 @@ arena_camera:
     #  The desired publisher frame rate if listening to the topics.
     #  This parameter can only be set once at startup
     #  Calling the GrabImages-Action can result in a higher framerate
-    frame_rate: 2.0
+    frame_rate: 5.0
 
     #  Mode of camera's shutter.
     #  The supported modes are "rolling", "global" and "global_reset"
@@ -102,6 +102,7 @@ arena_camera:
     #  reached by adapting the gain.
     exposure_auto: true
     gain_auto: true
+
     ##########################################################################
 
     #  The timeout while searching the exposure which is connected to the

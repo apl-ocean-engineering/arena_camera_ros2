@@ -63,8 +63,6 @@ ArenaCameraStreamingNode::~ArenaCameraStreamingNode() {
 }
 
 void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
-  RCLCPP_INFO(this->get_logger(), "Got new image");
-
   // Is this always true if the ImageCallback is called?
   Arena::IBuffer *pBuffer = dynamic_cast<Arena::IBuffer *>(pImage);
   if (pBuffer->HasImageData()) {
