@@ -1,4 +1,3 @@
-ARG BUILD_TYPE=clone
 ARG ROS_VERSION=iron
 
 #====================================================================
@@ -19,6 +18,7 @@ WORKDIR /tmp
 RUN apt-get update && apt-get install -y \
     git \
     python3-vcstool \
+    ros-${ROS_VERSION}-diagnostic-updater \
     ros-${ROS_VERSION}-generate-parameter-library \
     wget \
     && apt autoremove -y \
@@ -79,24 +79,24 @@ CMD ["/bin/bash"]
 #====================================================================
 # Intermediate image with cloned Git repos
 #====================================================================
-FROM ci as build_clone
+FROM ci as clone
 
 ARG WS_DIR=/home/$USERNAME/ros_ws
-ONBUILD WORKDIR ${WS_DIR}/src
+WORKDIR ${WS_DIR}/src
 
 ARG ARENA_CAMERA_ROS2_REPO=https://github.com/apl-ocean-engineering/arena_camera_ros2.git
 ARG ARENA_CAMERA_ROS2_BRANCH=master
-ONBUILD RUN echo "Cloning from ${ARENA_CAMERA_ROS2_BRANCH} branch ${ARENA_CAMERA_ROS2_REPO}"
+RUN echo "Cloning from ${ARENA_CAMERA_ROS2_BRANCH} branch ${ARENA_CAMERA_ROS2_REPO}"
 
 # This will break cache when the repo changes
-ONBUILD ADD https://api.github.com/repos/apl-ocean-engineering/arena_camera_ros2/git/refs/heads/${ARENA_CAMERA_ROS2_BRANCH} version.json
-ONBUILD RUN git clone -b ${ARENA_CAMERA_ROS2_BRANCH} ${ARENA_CAMERA_ROS2_REPO}
+ADD https://api.github.com/repos/apl-ocean-engineering/arena_camera_ros2/git/refs/heads/${ARENA_CAMERA_ROS2_BRANCH} version.json
+RUN git clone --depth 1 -b ${ARENA_CAMERA_ROS2_BRANCH} ${ARENA_CAMERA_ROS2_REPO}
 
 #====================================================================
 # Final image with built ROS2 packages
 #====================================================================
 # dockerfile_lint - ignore
-FROM build_${BUILD_TYPE} as arena_camera_ros2
+FROM clone as arena_camera_ros2
 
 ARG ROS_VERSION
 ARG WS_DIR
