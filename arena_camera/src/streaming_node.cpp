@@ -63,8 +63,6 @@ ArenaCameraStreamingNode::~ArenaCameraStreamingNode() {
 }
 
 void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
-  RCLCPP_INFO(this->get_logger(), "Got new image");
-
   // Is this always true if the ImageCallback is called?
   Arena::IBuffer *pBuffer = dynamic_cast<Arena::IBuffer *>(pImage);
   if (pBuffer->HasImageData()) {
@@ -90,9 +88,12 @@ void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
       return;
     }
 
+    if (img_raw_pub_.getNumSubscribers() == 0) return;
+
     sensor_msgs::msg::Image::SharedPtr image =
         std::make_shared<sensor_msgs::msg::Image>();
-    image->header.stamp = now();
+    image->header.stamp = this->now();
+    image->header.frame_id = params_.camera_frame;
 
     // Will return false if PixelEndiannessUnknown
     image->is_bigendian =
@@ -109,10 +110,11 @@ void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
 
     //     // NODELET_INFO_STREAM("Image size " << pImage->GetWidth() << " x "
     //     <<
-    //     // pImage->GetHeight() << " with " << pImage->GetBitsPerPixel() << "
-    //     bits");
+    //     // pImage->GetHeight() << " with " << pImage->GetBitsPerPixel() <<
+    //     " bits");
     //     // NODELET_INFO_STREAM("  expected size "
-    //     //                     << (pImage->GetWidth() * pImage->GetHeight() *
+    //     //                     << (pImage->GetWidth() * pImage->GetHeight()
+    //     *
     //     //                         (pImage->GetBitsPerPixel() / 8))
     //     //                     << " ; Image size " << data_size << " ; size
     //     filled "
@@ -123,55 +125,45 @@ void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
     image->data.resize(data_size);
     memcpy(&image->data[0], pImage->GetData(), data_size);
 
-    if (img_raw_pub_.getNumSubscribers() > 0) {
-      // Create a new cam_info-object in every frame, because it might have
-      // changed due to a 'set_camera_info'-service call
-      sensor_msgs::msg::CameraInfo::SharedPtr cam_info =
-          std::make_shared<sensor_msgs::msg::CameraInfo>(
-              camera_info_manager_->getCameraInfo());
-      cam_info->header.stamp = image->header.stamp;
+    // Create a new cam_info-object in every frame, because it might have
+    // changed due to a 'set_camera_info'-service call
+    sensor_msgs::msg::CameraInfo::SharedPtr cam_info =
+        std::make_shared<sensor_msgs::msg::CameraInfo>(
+            camera_info_manager_->getCameraInfo());
+    cam_info->header.stamp = image->header.stamp;
+    cam_info->header.frame_id = image->header.frame_id;
 
-      img_raw_pub_.publish(image, cam_info);
-    }
+    img_raw_pub_.publish(image, cam_info);
+
+    imaging_msgs::msg::ImagingMetadata meta_msg;
+    meta_msg.header = image->header;
+
+    meta_msg.exposure_us = currentExposure();
+    meta_msg.gain = currentGain();
+
+    metadata_pub_->publish(meta_msg);
+
+    //   if (encoding_conversions::isHDR(currentROSEncoding())) {
+    //     imaging_msgs::HdrImagingMetadata hdr_meta_msg;
+    //     hdr_meta_msg.header = meta_msg.header;
+    //     hdr_meta_msg.exposure_us = meta_msg.exposure_us;
+    //     hdr_meta_msg.gain = meta_msg.gain;
+
+    //     const int num_hdr_channels = 4;
+    //     hdr_meta_msg.hdr_exposure_us.resize(num_hdr_channels);
+    //     hdr_meta_msg.hdr_gain.resize(num_hdr_channels);
+
+    //     for (int hdr_channel = 0; hdr_channel < num_hdr_channels;
+    //     hdr_channel++)
+    //     {
+    //       hdr_meta_msg.hdr_exposure_us[hdr_channel] =
+    //           currentHdrExposure(hdr_channel);
+    //       hdr_meta_msg.hdr_gain[hdr_channel] = currentHdrGain(hdr_channel);
+    //     }
+
+    //     hdr_metadata_pub_.publish(hdr_meta_msg);
   }
-
-  //   imaging_msgs::ImagingMetadata meta_msg;
-  //   meta_msg.header = img_raw_msg_.header;
-
-  //   meta_msg.exposure_us = currentExposure();
-  //   meta_msg.gain = currentGain();
-
-  //   metadata_pub_.publish(meta_msg);
-
-  //   if (encoding_conversions::isHDR(currentROSEncoding())) {
-  //     imaging_msgs::HdrImagingMetadata hdr_meta_msg;
-  //     hdr_meta_msg.header = meta_msg.header;
-  //     hdr_meta_msg.exposure_us = meta_msg.exposure_us;
-  //     hdr_meta_msg.gain = meta_msg.gain;
-
-  //     const int num_hdr_channels = 4;
-  //     hdr_meta_msg.hdr_exposure_us.resize(num_hdr_channels);
-  //     hdr_meta_msg.hdr_gain.resize(num_hdr_channels);
-
-  //     for (int hdr_channel = 0; hdr_channel < num_hdr_channels;
-  //     hdr_channel++)
-  //     {
-  //       hdr_meta_msg.hdr_exposure_us[hdr_channel] =
-  //           currentHdrExposure(hdr_channel);
-  //       hdr_meta_msg.hdr_gain[hdr_channel] = currentHdrGain(hdr_channel);
-  //     }
-
-  //     hdr_metadata_pub_.publish(hdr_meta_msg);
 }
-
-// void ArenaCameraStreamingNode::reconfigureCallback(ArenaCameraConfig &config,
-//                                                       uint32_t level) {
-//   stopStreaming();
-
-//   ArenaCameraNodeletBase::reconfigureCallback(config, level);
-
-//   startStreaming();
-// }
 
 }  // namespace arena_camera
 

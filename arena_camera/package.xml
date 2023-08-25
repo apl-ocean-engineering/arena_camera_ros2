@@ -11,12 +11,13 @@
 
   <license>BSD 3-Clause</license>
 
-  <url type="repository"></url>
+  <url type="repository">https://github.com/apl-ocean-engineering/arena_camera_ros2/</url>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>camera_control_msgs</depend>
   <depend>camera_info_manager</depend>
+  <depend>generate_parameter_library</depend>
   <depend>image_transport</depend>
   <depend>imaging_msgs</depend>
   <depend>rclcpp_components</depend>
@@ -26,38 +27,6 @@
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-
-  <!-- <build_depend>actionlib</build_depend>
-  <build_depend>camera_control_msgs</build_depend>
-  <build_depend>camera_info_manager</build_depend>
-  <build_depend>cv_bridge</build_depend>
-  <build_depend>diagnostic_updater</build_depend>
-  <build_depend>image_geometry</build_depend>
-
-  <build_depend>arena_sdk</build_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_depend>roslaunch</build_depend>
-  <build_depend>roslint</build_depend>
-  <build_depend>dynamic_reconfigure</build_depend>
-  <build_depend>nodelet</build_depend>
-  <build_depend>imaging_msgs</build_depend>
-
-  <exec_depend>actionlib</exec_depend>
-  <exec_depend>camera_control_msgs</exec_depend>
-  <exec_depend>camera_info_manager</exec_depend>
-  <exec_depend>diagnostic_updater</exec_depend>
-  <exec_depend>cv_bridge</exec_depend>
-  <exec_depend>image_geometry</exec_depend>
-  <exec_depend>image_transport</exec_depend>
-  <exec_depend>arena_sdk</exec_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>roslaunch</exec_depend>
-  <exec_depend>sensor_msgs</exec_depend>
-  <exec_depend>roslint</exec_depend>
-  <exec_depend>dynamic_reconfigure</exec_depend>
-  <exec_depend>nodelet</exec_depend>
-  <exec_depend>imaging_msgs</exec_depend> -->
 
   <export>
     <build_type>ament_cmake</build_type>
