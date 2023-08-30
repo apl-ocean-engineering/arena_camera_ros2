@@ -1,5 +1,8 @@
 name: Build Docker Images
 
+# There's room for a more sophisticated Docker-image-building apparatus here
+# built around the different ROS2 version branches
+# But it hurts my head.
 on:
   push:
     branches: [main]
