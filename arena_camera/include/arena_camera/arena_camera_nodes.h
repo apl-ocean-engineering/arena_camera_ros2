@@ -188,6 +188,13 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   ///
   float currentGamma();
 
+  // ~~~ Camera Lookup Tables ~~~
+
+  ///  Enable/disable lookup table (LUT) in camera.
+  /// @param enable Whether to enable/disable the camera LUT
+  ///
+  void enableLUT(bool enable);
+
   // ~~~ HDR metadata (IMX490 only) ~~~
 
   float currentHdrGain(int channel);
@@ -253,12 +260,6 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   //  */
   // float calcCurrentBrightness();
 
-  // /**
-  //  *  Enable/disable lookup table (LUT) in camera.
-  //  * @param enable Whether to enable/disable the camera LUT
-  //  */
-  // void enableLUT(bool enable);
-
  protected:
   /// @brief
   /// @param cam_info_msg
@@ -302,13 +303,8 @@ class ArenaCameraBaseNode : public rclcpp::Node {
   // std::vector<std::size_t> sampling_indices_;
   // // std::array<float, 256> brightness_exp_lut_;
 
-  // boost::recursive_mutex device_mutex_;
-
-  // /// diagnostics:
+  /// diagnostics:
   std::shared_ptr<diagnostic_updater::Updater> diagnostics_updater_;
-
-  // rclcpp::TimerBase::SharedPtr diagnostics_timer_;
-  // void updateDiagnosticsCb(void);
 
   void create_diagnostics(diagnostic_updater::DiagnosticStatusWrapper &stat);
   void create_camera_info_diagnostics(
@@ -353,13 +349,12 @@ class ArenaCameraStreamingNode : public ArenaCameraBaseNode {
   void newImageCb(Arena::IImage *pImage);
 };
 
+/// ArenaCameraPolledNode is not currently implemented.
 class ArenaCameraPolledNode : public ArenaCameraBaseNode {
  public:
   ArenaCameraPolledNode(
       const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
   virtual ~ArenaCameraPolledNode();
-
-  // void onInit() override;
 
   /**
    * Callback for the grab images action

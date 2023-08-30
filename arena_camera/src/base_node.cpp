@@ -29,18 +29,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-// STD
-// #include <algorithm>
-// #include <boost/multi_array.hpp>
-// #include <cmath>
-// #include <cstring>
-// #include <string>
-// #include <vector>
-
 // ROS2
 #include <rcpputils/asserts.hpp>
-// #include <dynamic_reconfigure/SensorLevels.h>
-// #include <sensor_msgs/RegionOfInterest.h>
 
 // Arena
 #include <ArenaApi.h>
@@ -61,13 +51,11 @@ ArenaCameraBaseNode::ArenaCameraBaseNode(const std::string &node_name,
       pSystem_(nullptr),
       pDevice_(nullptr),
       pNodeMap_(nullptr),
-      is_streaming_(false)
-// arena_camera_parameter_set_(),
-// set_user_output_srvs_(),
-// pinhole_model_(),
-// sampling_indices_()
-{
+      is_streaming_(false) {
   diagnostics_updater_ = std::make_shared<diagnostic_updater::Updater>(this, 2);
+
+  // ~~ Diagnostic updater functions from ros1 node which haven't been
+  // re-implemented...
   //   diagnostics_updater_.setHardwareID("none");
   //   diagnostics_updater_.add("camera_availability", this,
   //                            &ArenaCameraBaseNode::create_diagnostics);
@@ -141,12 +129,6 @@ ArenaCameraBaseNode::ArenaCameraBaseNode(const std::string &node_name,
   parameter_check_timer_ = this->create_wall_timer(
       std::chrono::seconds(1),
       std::bind(&ArenaCameraBaseNode::checkParametersCb, this));
-
-  //   _dynReconfigureServer =
-  //   std::make_shared<DynReconfigureServer>(pnh);
-  //   _dynReconfigureServer->setCallback(boost::bind(
-  //       &ArenaCameraBaseNode::reconfigureCallbackWrapper, this, _1,
-  //       _2));
 }
 
 ArenaCameraBaseNode::~ArenaCameraBaseNode() {
@@ -370,16 +352,15 @@ bool ArenaCameraBaseNode::configureCamera() {
                                            "StreamBufferHandlingMode",
                                            "NewestOnly");
 
-    //     // bool isTriggerArmed = false;
-    //     // if (GenApi::IsWritable(pTriggerMode)) {
-    //     //   do {
-    //     //     isTriggerArmed = Arena::GetNodeValue<bool>(pNodeMap,
-    //     "TriggerArmed");
-    //     //   } while (isTriggerArmed == false);
-    //     //   // Arena::ExecuteNode(pNodeMap, "TriggerSoftware");
-    //     // }
+    // bool isTriggerArmed = false;
+    // if (GenApi::IsWritable(pTriggerMode)) {
+    //   do {
+    //     isTriggerArmed = Arena::GetNodeValue<bool>(pNodeMap, "TriggerArmed");
+    //   } while (isTriggerArmed == false);
+    //   // Arena::ExecuteNode(pNodeMap, "TriggerSoftware");
+    // }
 
-    // Initial configuration of camera
+    // ~~ Initial configuration of camera
 
     setFrameRate(params_.frame_rate);
     setGain(params_);
@@ -772,25 +753,6 @@ float ArenaCameraBaseNode::currentGain() {
     return gainValue;
   }
 }
-
-// void ArenaCameraBaseNode::disableAllRunningAutoBrightessFunctions() {
-//   GenApi::CStringPtr pExposureAuto = pNodeMap_->GetNode("ExposureAuto");
-//   GenApi::CStringPtr pGainAuto = pNodeMap_->GetNode("GainAuto");
-
-//   if (!pExposureAuto || !GenApi::IsWritable(pExposureAuto) || !pGainAuto ||
-//       !GenApi::IsWritable(pGainAuto)) {
-//     Node_WARN_STREAM("Unable to disable auto gain & exposure");
-//     return;
-//   }
-
-//   else {
-//     Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(),
-//                                            "ExposureAuto", "Off");
-//     Arena::SetNodeValue<GenICam::gcstring>(pDevice_->GetNodeMap(),
-//     "GainAuto",
-//                                            "Off");
-//   }
-// }
 
 //========================================================================
 //
@@ -1196,21 +1158,22 @@ float ArenaCameraBaseNode::currentHdrExposure(int channel) {
 //   return sum;
 // }
 
-// //-------------------------------------------------------------------
-// // Functions for dealing with LUT
-// //
-// // \todo{amarburg}  Very simple right now
-// //
+//-------------------------------------------------------------------
+// Functions for dealing with LUT
+//
+// \todo{amarburg}  Very simple right now
+//
 
-// void ArenaCameraBaseNode::enableLUT(bool enable) {
-//   try {
-//     Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "LUTEnable", enable);
-//   } catch (const GenICam::GenericException &e) {
-//     Node_ERROR_STREAM("An exception while setting LUTEnable to "
-//                          << (enable ? "true" : "false")
-//                          << " occurred: " << e.GetDescription());
-//   }
-// }
+void ArenaCameraBaseNode::enableLUT(bool enable) {
+  try {
+    Arena::SetNodeValue<bool>(pDevice_->GetNodeMap(), "LUTEnable", enable);
+  } catch (const GenICam::GenericException &e) {
+    RCLCPP_ERROR_STREAM(this->get_logger(),
+                        "An exception while setting LUTEnable to "
+                            << (enable ? "true" : "false")
+                            << " occurred: " << e.GetDescription());
+  }
+}
 
 //===================================================================
 //  Periodic callback to check if parameters have changed

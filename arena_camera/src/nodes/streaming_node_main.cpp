@@ -1,6 +1,11 @@
 /******************************************************************************
  * Software License Agreement (BSD License)
  *
+ * Copyright (C) 2023, University of Washington. All rights reserved.
+ *
+ * Derived from LucidVisions ros2 node, which included this original
+ * copyright notification:
+ *
  * Copyright (C) 2016, Magazino GmbH. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +15,7 @@
  *   * Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
  *     documentation and/or other materials provided with the distribution.
- *   * Neither the names of Magazino GmbH nor the names of its
+ *   * Neither the names of the copyright holders nor the names of its
  *     contributors may be used to endorse or promote products derived from
  *     this software without specific prior written permission.
  *
@@ -26,11 +31,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-
-/* Authors: debout@magazino.eu
- *          grimm@magazino.eu
- *          engelhard@magazino.eu
- */
 
 #include "arena_camera/arena_camera_nodes.h"
 
