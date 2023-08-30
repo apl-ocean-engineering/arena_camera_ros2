@@ -462,7 +462,7 @@ bool ArenaCameraBaseNode::setImageEncoding(const std::string &ros_encoding) {
 
   RCLCPP_INFO_STREAM(this->get_logger(), "Set image_encoding to ROS '"
                                              << ros_encoding << "' / GenICam '"
-                                             << gen_api_encoding);
+                                             << gen_api_encoding << "'");
 
   if (arena_camera::encoding_conversions::isHDR(ros_encoding)) {
     RCLCPP_ERROR_STREAM(this->get_logger(),
