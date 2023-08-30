@@ -21,8 +21,8 @@ RUN apt-get update && apt-get install -y \
     ros-${ROS_VERSION}-diagnostic-updater \
     ros-${ROS_VERSION}-generate-parameter-library \
     wget \
-    && apt autoremove -y \
-    && apt clean -y \
+    && apt-get autoremove -y \
+    && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN if [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \
@@ -66,11 +66,11 @@ RUN groupadd --gid $USER_GID $USERNAME \
   && apt-get update \
   && apt-get install -y sudo \
   && apt autoremove -y \
-  && apt clean -y \
+  && apt-get clean -y \
   && rm -rf /var/lib/apt/lists/* \
   && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
   && echo "Defaults:$USERNAME env_keep += \"http_proxy https_proxy ftp_proxy all_proxy no_proxy\"" > /etc/sudoers.d/proxy \
-  && chmod 0440 /etc/sudoers.d/$USERNAME
+  && chmod 0440 /etc/sudoers.d/$USERNAME /etc/sudoers.d/proxy
 
 ## ~~ Switch to non-root user ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 USER $USERNAME
@@ -113,12 +113,19 @@ RUN vcs import --shallow --skip-existing < arena_camera_ros2/arena_camera_ros2.r
 WORKDIR ${WS_DIR}
 
 RUN rosdep update --rosdistro=${ROS_VERSION}
+
 # This is quite expensive to run on every build...
-RUN ~/ros2_entrypoint.sh \
-       rosdep install -y --ignore-src \
+# n.b. this must be run through sudo, not with USER root,
+# because "rosdep install" runs as the user
+RUN sudo apt-get update \
+    && ~/ros2_entrypoint.sh \
+    && rosdep install -y --ignore-src \
                     --rosdistro=${ROS_VERSION} \
                     --skip-keys=arena_sdk \
-                    --from-paths src/
+                    --from-paths src/\
+    && sudo apt-get autoremove -y \
+    && sudo apt-get clean -y \
+    && sudo rm -rf /var/lib/apt/lists/*
 
 RUN ~/ros2_entrypoint.sh \
                 colcon build && \
