@@ -65,7 +65,11 @@ RUN groupadd --gid $USER_GID $USERNAME \
   # [Optional] Add sudo support. Omit if you don't need to install software after connecting.
   && apt-get update \
   && apt-get install -y sudo \
+  && apt autoremove -y \
+  && apt clean -y \
+  && rm -rf /var/lib/apt/lists/* \
   && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+  && echo "Defaults:$USERNAME env_keep += \"http_proxy https_proxy ftp_proxy all_proxy no_proxy\"" > /etc/sudoers.d/proxy \
   && chmod 0440 /etc/sudoers.d/$USERNAME
 
 ## ~~ Switch to non-root user ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
