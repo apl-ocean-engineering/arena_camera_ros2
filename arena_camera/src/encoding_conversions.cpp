@@ -1,7 +1,7 @@
 /******************************************************************************
  * Copyright (C) 2023 University of Washington
  *
- * based on the arena_camera_ros driver released under the BSD License:
+ * based on the arena_camera_ros package released under the BSD License:
  * Copyright (C) 2021, Lucidvision Labs
  * Copyright (C) 2016, Magazino GmbH. All rights reserved.
  *
@@ -81,7 +81,7 @@ bool ros2GenAPI(const std::string& ros_enc, std::string& gen_api_enc) {
   }
   */
   else {
-    /* No gen-api pendant existant for following ROS-encodings:
+    /* No gen-api equivalent existant for following ROS-encodings:
      * - sensor_msgs::image_encodings::MONO16
      * - sensor_msgs::image_encodings::BGRA8
      * - sensor_msgs::image_encodings::BGR16

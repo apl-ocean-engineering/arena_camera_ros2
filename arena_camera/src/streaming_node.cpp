@@ -37,9 +37,6 @@
 
 namespace arena_camera {
 
-// using sensor_msgs::CameraInfo;
-// using sensor_msgs::CameraInfoPtr;
-
 ArenaCameraStreamingNode::ArenaCameraStreamingNode(
     const rclcpp::NodeOptions &options)
     : ArenaCameraBaseNode("arena_streaming", options),
@@ -47,7 +44,7 @@ ArenaCameraStreamingNode::ArenaCameraStreamingNode(
                                     std::placeholders::_1)) {
   pDevice_->RegisterImageCallback(&image_callback_obj_);
 
-  // Exceptions in constructor ... dodgy
+  // Exceptions in constructor ... **shudder**
   try {
     startStreaming();
   } catch (GenICam::GenericException &e) {
@@ -108,17 +105,13 @@ void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
 
     const unsigned int data_size = image->height * image->step;
 
-    //     // NODELET_INFO_STREAM("Image size " << pImage->GetWidth() << " x "
-    //     <<
-    //     // pImage->GetHeight() << " with " << pImage->GetBitsPerPixel() <<
-    //     " bits");
-    //     // NODELET_INFO_STREAM("  expected size "
-    //     //                     << (pImage->GetWidth() * pImage->GetHeight()
-    //     *
-    //     //                         (pImage->GetBitsPerPixel() / 8))
-    //     //                     << " ; Image size " << data_size << " ; size
-    //     filled "
-    //     //                     << pImage->GetSizeFilled());
+    // NODELET_INFO_STREAM("Image size " << pImage->GetWidth() << " x " <<
+    // pImage->GetHeight() << " with " << pImage->GetBitsPerPixel() << " bits");
+    // NODELET_INFO_STREAM("  expected size "
+    //                     << (pImage->GetWidth() * pImage->GetHeight() *
+    //                         (pImage->GetBitsPerPixel() / 8))
+    //                     << " ; Image size " << data_size << " ; size filled "
+    //                     << pImage->GetSizeFilled());
 
     // \todo{amarburg} Validate image by comparing calculated image
     //  size to actual Buffer/Image payload size

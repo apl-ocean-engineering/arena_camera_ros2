@@ -33,16 +33,10 @@
 
 namespace arena_camera {
 
-// using sensor_msgs::CameraInfo;
-// using sensor_msgs::CameraInfoPtr;
-
 ArenaCameraPolledNode::ArenaCameraPolledNode(const rclcpp::NodeOptions &options)
     : ArenaCameraBaseNode("arena_polled", options) {}
 
 ArenaCameraPolledNode::~ArenaCameraPolledNode() {}
-
-//
-// Nodelet::onInit  function
 
 // void ArenaCameraPolledNode::onInit() {
 //   ArenaCameraNodeletBase::onInit();

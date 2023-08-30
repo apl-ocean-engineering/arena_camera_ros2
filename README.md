@@ -1,10 +1,14 @@
 ## Arena Camera Driver for ROS2
 
-**Project Status:**  This software is a work in progress.  At present it is an in-progrss port of our [ROS1 LucidVision Driver](https://github.com/apl-ocean-engineering/arena_camera_ros) driver and is not feature-complete.
+**Project Status:**  This software is a work in progress.  At present the streaming node is functional with the sample cameras which are available to us (a [PHX122S](https://thinklucid.com/product/phoenix-12-2-mp-imx226/) and a [TRI054S](https://thinklucid.com/product/triton-5-mp-imx490/) for testing HDR modes).   The polled node is not functional.
 
-This repo is a ROS2 driver for LucidVision machine vision camera using their ["Arena" SDK for Ubuntu](https://thinklucid.com/downloads-hub/).
+---
+
+This package is a ROS2 driver for LucidVision machine vision camera using their ["Arena" SDK for Ubuntu](https://thinklucid.com/downloads-hub/).
 
 This particular version is forked from the upstream [driver published by LucidVision](https://github.com/lucidvisionlabs/arena_camera_ros2) and includes significant refactoring for functionality / readability.
+
+See also [arena_camera_ros](https://github.com/apl-ocean-engineering/arena_camera_ros) for ROS1.
 
 # Getting Started
 
@@ -14,7 +18,7 @@ See the [ROS2 documentation at LucidVision](https://support.thinklucid.com/using
 
 # Getting Started -- with Docker
 
-A full Dockerfile is included in the [.docker](.docker/) directory.  See the [README in that directory](.docker/README.md) for more details.
+A full [Dockerfile](.docker/Dockerfile) is included in the [.docker/](.docker/) directory.  See the [README in that directory](.docker/README.md) for more details.
 
 # Contents
 
