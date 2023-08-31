@@ -743,14 +743,12 @@ bool ArenaCameraBaseNode::setGain(const arena_camera::Params &p) {
 }
 
 float ArenaCameraBaseNode::currentGain() {
-  GenApi::CFloatPtr pGain = pDevice_->GetNodeMap()->GetNode("Gain");
-
-  if (!pGain || !GenApi::IsReadable(pGain)) {
-    RCLCPP_WARN(this->get_logger(), "No gain value");
-    return -1.;
-  } else {
-    float gainValue = pGain->GetValue();
-    return gainValue;
+  try {
+    return Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Gain");
+  } catch (const GenICam::GenericException &e) {
+    RCLCPP_ERROR_STREAM(this->get_logger(),
+                        "Unable to read gain: " << e.GetDescription());
+    return -1;
   }
 }
 
