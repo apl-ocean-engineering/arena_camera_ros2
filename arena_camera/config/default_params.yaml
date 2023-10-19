@@ -26,6 +26,7 @@ arena_camera:
     #  taken from the list of strings in include/sensor_msgs/image_encodings.h
     #  The supported encodings are 'mono8', 'bgr8', 'rgb8', 'bayer_bggr8',
     #  'bayer_gbrg8' and 'bayer_rggb8'
+    #
     #  Default values are 'mono8' and 'rgb8'
     image_encoding: "mono8"
 
@@ -105,15 +106,6 @@ arena_camera:
 
     ##########################################################################
 
-    #  The timeout while searching the exposure which is connected to the
-    #  desired brightness. For slow system this has to be increased.
-    # exposure_search_timeout: 5.0
-
-    #  The exposure search can be limited with an upper bound. This is to prevent
-    #  very high exposure times and resulting timeouts.
-    #  A typical value for this upper bound is ~2000000us.
-    # auto_exposure_upper_limit: 2000000.0
-
     #  Only used for GigE cameras.
     #
     #  The MTU size.
@@ -127,4 +119,4 @@ arena_camera:
     #
     gige:
       mtu_size: 9000
-      inter_pkg_delay: 1000
+      inter_pkt_delay: 5000

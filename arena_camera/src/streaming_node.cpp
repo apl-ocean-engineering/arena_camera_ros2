@@ -70,7 +70,7 @@ void ArenaCameraStreamingNode::newImageCb(Arena::IImage *pImage) {
 
       if (pBuffer->DataLargerThanBuffer()) {
         RCLCPP_WARN_STREAM(this->get_logger(),
-                           "Image incomplete: data larger than buffer;  "
+                           "Image incomplete: Data larger than buffer;  "
                                << pBuffer->GetSizeOfBuffer() << " > "
                                << payload_size);
       } else {

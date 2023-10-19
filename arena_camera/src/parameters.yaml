@@ -12,18 +12,6 @@ arena_camera:
     description: "Serial number for camera.",
   }
 
-  gige:
-    mtu_size: {
-      type: int,
-      default_value: 1500,
-      read_only: true,
-      description: "Packet size",
-      validation: {
-        bounds<>: [1,11000]
-      }
-    }
-
-
   image_encoding: {
     type: string,
     default_value: "rgb8",
@@ -106,3 +94,31 @@ arena_camera:
       bounds<>: [0.0, 5.0]
     }
   }
+
+  # Parameters specific to GigE cameras
+  gige:
+    mtu_size: {
+      type: int,
+      default_value: 1500,
+      read_only: true,
+      description: "Packet size",
+      validation: {
+        bounds<>: [1,11000]
+      }
+    }
+
+    inter_pkt_delay: {
+      type: int,
+      default_value: 1000,
+      read_only: true,
+      description: "Inter-packet delay in ns",
+      validation: {
+        bounds<>: [1,15000]
+      }
+    }
+
+    packet_resend: {
+      type: bool,
+      default_value: True,
+      description: "Enable packet re-send"
+    }

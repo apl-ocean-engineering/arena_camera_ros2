@@ -262,6 +262,26 @@ bool ArenaCameraBaseNode::configureCamera() {
         RCLCPP_INFO_STREAM(this->get_logger(),
                            " -> Camera MTU is not writeable");
       }
+      RCLCPP_INFO_STREAM(
+          this->get_logger(),
+          " -> MTU read from camera " << Arena::GetNodeValue<int64_t>(
+              pNodeMap, "DeviceStreamChannelPacketSize"));
+
+      auto interPacketDelay = pNodeMap->GetNode("GevSCPD");
+      if (GenApi::IsWritable(pPacketSize)) {
+        RCLCPP_INFO_STREAM(this->get_logger(),
+                           " -> Setting inter-packet delay to "
+                               << params_.gige.inter_pkt_delay);
+        Arena::SetNodeValue<int64_t>(pNodeMap, "GevSCPD",
+                                     params_.gige.inter_pkt_delay);
+      } else {
+        RCLCPP_INFO_STREAM(this->get_logger(),
+                           " -> Camera inter-packet delay is not writeable");
+      }
+      RCLCPP_INFO_STREAM(
+          this->get_logger(),
+          " -> Inter-packet delay real from camera "
+              << Arena::GetNodeValue<int64_t>(pNodeMap, "GevSCPD") << " ns");
     }
 
     auto payloadSize = Arena::GetNodeValue<int64_t>(pNodeMap, "PayloadSize");
@@ -275,9 +295,12 @@ bool ArenaCameraBaseNode::configureCamera() {
                               "StreamAutoNegotiatePacketSize", true);
 
     // enable stream packet resend
-    RCLCPP_DEBUG_STREAM(this->get_logger(), "Enabling packet resend");
+    RCLCPP_DEBUG_STREAM(this->get_logger(),
+                        (params_.gige.packet_resend ? "Enabling" : "Disabling")
+                            << " packet resend");
     Arena::SetNodeValue<bool>(pDevice_->GetTLStreamNodeMap(),
-                              "StreamPacketResendEnable", true);
+                              "StreamPacketResendEnable",
+                              params_.gige.packet_resend);
 
     setImageEncoding(params_.image_encoding);
     if (encoding_conversions::isHDR(params_.image_encoding)) {
@@ -465,10 +488,10 @@ bool ArenaCameraBaseNode::setImageEncoding(const std::string &ros_encoding) {
                                              << gen_api_encoding << "'");
 
   if (arena_camera::encoding_conversions::isHDR(ros_encoding)) {
-    RCLCPP_ERROR_STREAM(this->get_logger(),
-                        "Requested HDR encoding \""
-                            << ros_encoding
-                            << "\", enabling HDR mode in camera");
+    RCLCPP_WARN_STREAM(this->get_logger(),
+                       "Requested HDR encoding \""
+                           << ros_encoding
+                           << "\", enabling HDR mode in camera");
 
     try {
       GenApi::CStringPtr pHDROutput =
@@ -712,7 +735,17 @@ bool ArenaCameraBaseNode::setGain(ArenaCameraBaseNode::AutoGainMode gain_mode,
 
       const float gain_min = pGain->GetMin(), gain_max = pGain->GetMax();
       float gain_to_set = gain_min + target_gain * (gain_max - gain_min);
+
+      RCLCPP_INFO_STREAM(this->get_logger(),
+                         " Setting gain to proportional gain "
+                             << target_gain << " which is " << gain_to_set
+                             << " for this camera");
       pGain->SetValue(gain_to_set);
+
+      RCLCPP_INFO_STREAM(
+          this->get_logger(),
+          " -> Gain read from camera "
+              << Arena::GetNodeValue<double>(pDevice_->GetNodeMap(), "Gain"));
 
     } else if (gain_mode == ArenaCameraBaseNode::AutoGainMode::Once) {
       Arena::SetNodeValue<GenICam::gcstring>(pNodeMap, "GainAuto", "Once");
