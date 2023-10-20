@@ -95,6 +95,7 @@ jobs:
         with:
           context: .docker
           file: .docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
           build-args: ROS_DISTRO=${{ matrix.ROS_DISTRO }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
